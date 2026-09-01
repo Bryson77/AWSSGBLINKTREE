@@ -1,0 +1,27 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <g fill="#0A0A0A">
+    <!-- Top pins -->
+    <rect x="40" y="25" width="40" height="15"/>
+    <rect x="40" y="15" width="8" height="10"/>
+    <rect x="56" y="15" width="8" height="10"/>
+    <rect x="72" y="15" width="8" height="10"/>
+
+    <!-- Bottom pins -->
+    <rect x="40" y="80" width="40" height="15"/>
+    <rect x="40" y="95" width="8" height="10"/>
+    <rect x="56" y="95" width="8" height="10"/>
+    <rect x="72" y="95" width="8" height="10"/>
+
+    <!-- Left pins -->
+    <rect x="25" y="40" width="15" height="40"/>
+    <rect x="15" y="40" width="10" height="8"/>
+    <rect x="15" y="56" width="10" height="8"/>
+    <rect x="15" y="72" width="10" height="8"/>
+
+    <!-- Right pins -->
+    <rect x="80" y="40" width="15" height="40"/>
+    <rect x="95" y="40" width="10" height="8"/>
+    <rect x="95" y="56" width="10" height="8"/>
+    <rect x="95" y="72" width="10" height="8"/>
+  </g>
+</svg>

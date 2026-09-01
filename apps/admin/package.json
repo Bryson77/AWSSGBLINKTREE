@@ -1,22 +1,16 @@
 {
-  "name": "aws-sbg-monorepo",
+  "name": "admin",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "dev:web": "npm run dev --workspace=web",
-    "dev:admin": "npm run dev --workspace=admin",
-    "build:web": "npm run build --workspace=web",
-    "build:admin": "npm run build --workspace=admin",
-    "build": "npm run build --workspaces",
-    "deploy:web": "npm run deploy --workspace=web",
-    "deploy:admin": "npm run deploy --workspace=admin",
-    "deploy:all": "npm run deploy:web && npm run deploy:admin"
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "deploy": "next build && npx wrangler pages deploy ./out --project-name=awssbg-admin --commit-dirty=true"
   },
   "dependencies": {
+    "@awssbg/shared": "*",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "@tailwindcss/postcss": "^4.3.3",
