@@ -45,16 +45,15 @@ export default function TermsPage() {
               </p>
             </div>
 
-            {/* MANDATORY DISCLAIMER BOX */}
+            {/* OFFICIAL AFFILIATION & COMMUNITY NOTICE */}
             <div className="mb-8 border-2 border-black bg-[#FEF08A] p-4 text-black shadow-[3px_3px_0px_#000000]">
               <div className="mb-1 flex items-center gap-1.5 font-mono text-xs font-black uppercase tracking-wider text-black">
-                <HiOutlineExclamationTriangle className="h-4 w-4" />
-                <span>Notice of Non-Affiliation</span>
+                <HiOutlineDocumentText className="h-4 w-4 text-black" />
+                <span>AWS Student Builder Group Notice</span>
               </div>
               <p className="font-mono text-[12px] font-bold leading-relaxed text-black">
-                THIS PLATFORM WAS NOT CREATED BY, NOR IS IT ENDORSED, SPONSORED, OR DIRECTLY AFFILIATED WITH AMAZON WEB
-                SERVICES, INC. (AWS). IT WAS INDEPENDENTLY BUILT AND MAINTAINED BY STUDENT BUILDER GROUP (SBG) MEMBERS TO
-                FACILITATE ACCESS TO EDUCATIONAL STUDY JAMS, CERTIFICATION RESOURCES, AND COMMUNITY EVENTS.
+                AWS STUDENT BUILDER GROUP (SBG) IS AN OFFICIAL STUDENT COMMUNITY AFFILIATED WITH AND SUPPORTED BY AMAZON WEB SERVICES (AWS).
+                THIS PORTAL IS MAINTAINED BY SBG LEADERS TO FACILITATE ACCESS TO HANDS-ON STUDY JAMS, CERTIFICATION VOUCHERS, WORKSHOPS, AND CLOUD RESOURCES.
               </p>
             </div>
 

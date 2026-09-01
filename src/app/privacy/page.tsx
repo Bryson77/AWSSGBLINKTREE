@@ -45,16 +45,15 @@ export default function PrivacyPage() {
               </p>
             </div>
 
-            {/* MANDATORY DISCLAIMER BOX */}
+            {/* OFFICIAL AFFILIATION & PURPOSE NOTICE */}
             <div className="mb-8 border-2 border-black bg-[#FEF08A] p-4 text-black shadow-[3px_3px_0px_#000000]">
               <div className="mb-1 flex items-center gap-1.5 font-mono text-xs font-black uppercase tracking-wider text-black">
-                <HiOutlineExclamationTriangle className="h-4 w-4" />
-                <span>Independent Community Notice</span>
+                <HiOutlineShieldCheck className="h-4 w-4 text-black" />
+                <span>AWS Student Builder Group Notice</span>
               </div>
               <p className="font-mono text-[12px] font-bold leading-relaxed text-black">
-                THIS PLATFORM WAS NOT CREATED BY NOR IS IT ENDORSED OR AFFILIATED WITH AMAZON WEB SERVICES, INC. (AWS).
-                IT WAS INDEPENDENTLY DEVELOPED BY AWS STUDENT BUILDER GROUP (SBG) MEMBERS TO MAKE IT EASIER FOR STUDENTS
-                AND COMMUNITY MEMBERS TO ACCESS WORKSHOP LINKS, CERTIFICATION RESOURCES, AND INFORMATION.
+                AWS STUDENT BUILDER GROUP (SBG) IS AN OFFICIAL STUDENT-LED COMMUNITY POWERED BY AND AFFILIATED WITH AMAZON WEB SERVICES (AWS).
+                THIS PORTAL WAS CREATED AND MAINTAINED BY SBG STUDENT LEADERS TO MAKE IT EASIER FOR STUDENTS AND COMMUNITY MEMBERS TO ACCESS WORKSHOP LINKS, CERTIFICATION VOUCHERS, STUDY JAMS, AND CLOUD RESOURCES. WE STRICTLY DO NOT SELL PERSONAL DATA.
               </p>
             </div>
 

@@ -26,11 +26,11 @@ export default function Footer() {
         </div>
 
         <p className="font-mono text-[10px] leading-tight text-zinc-500">
-          Independent student builder community. Not created, affiliated with, or endorsed by Amazon Web Services, Inc.
+          Official student builder community powered by Amazon Web Services. Maintained by SBG leaders to share resources and events.
         </p>
 
         <div className="font-mono text-[10px] text-zinc-400">
-          &copy; {new Date().getFullYear()} AWS SBG Community
+          &copy; {new Date().getFullYear()} AWS Student Builder Group
         </div>
       </div>
     </footer>
