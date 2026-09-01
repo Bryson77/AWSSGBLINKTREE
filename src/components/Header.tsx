@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Header — Light mode brand strip with official AWS SBG chip logo.
- * Primary colors: Black and White, Accents: Purple & Blue.
+ * Header — Hardcore Neo-Brutalist brand strip with AWS SBG chip logo.
+ * Geometry: 0px sharp corners, 3px solid black border, 2px hard shadow.
  */
 
 import Image from "next/image";
@@ -11,10 +11,10 @@ import { HiOutlineShare } from "react-icons/hi2";
 
 export default function Header() {
   const handleShare = async () => {
-    const url = typeof window !== "undefined" ? window.location.origin : "https://awssbgtut.co.za";
+    const url = typeof window !== "undefined" ? window.location.origin : "https://awssbg.cloud";
     const shareData = {
-      title: "AWS Student Builder Group — TUT",
-      text: "Connect with the AWS Student Builder Group at Tshwane University of Technology!",
+      title: "AWS Student Builder Group",
+      text: "Connect with the AWS Student Builder Group community!",
       url,
     };
 
@@ -32,7 +32,7 @@ export default function Header() {
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copied to clipboard!", {
-        description: "Share the AWS SBG Linktree with fellow students.",
+        description: "Share the AWS SBG Linktree with fellow builders.",
       });
     } catch {
       toast.error("Couldn't copy link. Please copy the URL from your browser.");
@@ -40,11 +40,11 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-black/[0.06] bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex h-[60px] max-w-[500px] items-center justify-between px-5">
+    <header className="sticky top-0 z-30 w-full border-b-[3px] border-black bg-white">
+      <div className="mx-auto flex h-[58px] max-w-[500px] items-center justify-between px-5">
         {/* Brand logo + Wordmark */}
-        <div className="flex items-center gap-2.5">
-          <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-md border border-black/10 bg-white p-0.5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center border-2 border-black bg-white p-1 shadow-[2px_2px_0px_#000000]">
             <Image
               src="/logo.png"
               alt="AWS SBG Logo"
@@ -54,15 +54,15 @@ export default function Header() {
               priority
             />
           </div>
-          <span className="text-[13px] font-bold uppercase tracking-[0.14em] text-[#0A0A0A]">
-            AWS SBG <span className="text-accent-purple font-extrabold">TUT</span>
+          <span className="font-mono text-[13px] font-black uppercase tracking-wider text-black">
+            AWS SBG <span className="text-accent-purple">//</span> BUILDERS
           </span>
         </div>
 
-        {/* Share Button with Sonner feedback */}
+        {/* Share Button (Brutalist stamp) */}
         <button
           onClick={handleShare}
-          className="group flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 bg-black/[0.02] text-zinc-600 transition-all hover:border-black/25 hover:bg-black/[0.05] hover:text-[#0A0A0A] active:scale-95"
+          className="group flex h-8 w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000000] transition-all hover:bg-black hover:text-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
           aria-label="Share Linktree"
           title="Share Linktree"
         >
@@ -72,3 +72,4 @@ export default function Header() {
     </header>
   );
 }
+

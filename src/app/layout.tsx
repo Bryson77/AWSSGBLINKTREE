@@ -19,20 +19,19 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://awssbgtut.co.za"
+    process.env.NEXT_PUBLIC_SITE_URL || "https://awssbg.cloud"
   ),
-  title: "AWS Student Builder Group — TUT",
+  title: "AWS Student Builder Group",
   description:
-    "Official Linktree & Hub for the AWS Student Builder Group at Tshwane University of Technology. Join our community, attend cloud workshops, prepare for AWS certifications, and build real-world cloud projects.",
+    "Official Linktree & Hub for the AWS Student Builder Group. Join our student cloud community, attend hands-on workshops, prepare for AWS certifications, and build real-world projects.",
   keywords: [
     "AWS",
     "AWS Student Builder Group",
     "AWS SBG",
     "AWS Cloud Club",
-    "TUT",
-    "Tshwane University of Technology",
     "Cloud Computing",
-    "South Africa",
+    "Cloud Builders",
+    "AWS Certification",
   ],
   icons: {
     icon: [
@@ -43,18 +42,17 @@ export const metadata: Metadata = {
     apple: "/logo.png",
   },
   openGraph: {
-    title: "AWS Student Builder Group — TUT",
+    title: "AWS Student Builder Group",
     description:
-      "Official Linktree for the AWS Student Builder Group at Tshwane University of Technology. Cloud workshops, certifications, and resources.",
+      "Official Linktree for the AWS Student Builder Group. Cloud workshops, certifications, and resources.",
     type: "website",
-    locale: "en_ZA",
     images: ["/logo.png"],
   },
   twitter: {
     card: "summary",
-    title: "AWS Student Builder Group — TUT",
+    title: "AWS Student Builder Group",
     description:
-      "TUT's official student cloud community powered by Amazon Web Services.",
+      "Official student cloud community powered by Amazon Web Services.",
     images: ["/logo.png"],
   },
 };
@@ -66,9 +64,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${montserrat.variable}`}>
-      <body className="min-h-screen bg-[#F8F9FA] text-[#0A0A0A] font-[family-name:var(--font-sans)] antialiased selection:bg-accent-purple/20 selection:text-[#0A0A0A]">
+      <body className="min-h-screen bg-[#F4F4F5] text-black font-[family-name:var(--font-sans)] antialiased selection:bg-accent-purple selection:text-white">
         {children}
-        {/* Sonner Toast Provider */}
+        {/* Neo-Brutalist Toaster */}
         <Toaster
           theme="light"
           position="bottom-center"
@@ -76,11 +74,12 @@ export default function RootLayout({
           toastOptions={{
             style: {
               background: "#FFFFFF",
-              border: "1px solid rgba(0, 0, 0, 0.08)",
-              color: "#0A0A0A",
-              borderRadius: "12px",
-              boxShadow:
-                "0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)",
+              border: "3px solid #000000",
+              color: "#000000",
+              borderRadius: "0px",
+              boxShadow: "4px 4px 0px #000000",
+              fontFamily: "ui-monospace, monospace",
+              fontWeight: 700,
             },
           }}
         />
@@ -88,3 +87,4 @@ export default function RootLayout({
     </html>
   );
 }
+

@@ -1,11 +1,11 @@
 /**
- * LinkButton — Light mode with bold black fill sweep on hover.
- * Primary colors: Black & White, Accents: Purple & Blue.
+ * LinkButton — Hardcore Neo-Brutalist Link Card.
+ * Geometry: 0px sharp corners, 3px solid black border, 4px hard shadow.
  * Micro-interactions:
- *  - Sweep fill to solid dark on hover
- *  - Text & icon invert to pure white
- *  - Directional arrow translation on hover
- *  - Tactile scale(0.98) on active press
+ *  - Slide-fill sweep to Electric Purple on hover
+ *  - High contrast text/icon inversion to pure white
+ *  - Directional arrow translation & rotation on hover
+ *  - Tactile scale(0.98) & translate(2px, 2px) on active click
  */
 
 import { getIconForPlatform } from "@/lib/icons";
@@ -31,33 +31,33 @@ export default function LinkButton({
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group link-button flex w-full items-center justify-between gap-3.5 rounded-[14px] px-4 py-3.5 text-left no-underline"
+      className="group link-button flex w-full items-center justify-between gap-3.5 px-4 py-3.5 text-left no-underline"
     >
       <div className="flex min-w-0 items-center gap-3.5">
-        {/* Platform icon badge */}
+        {/* Platform icon stamp */}
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-[#0A0A0A] transition-colors group-hover:bg-white/15 group-hover:text-white"
+          className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-black bg-zinc-100 text-black transition-all duration-150 group-hover:border-white group-hover:bg-white group-hover:text-black"
           aria-hidden="true"
         >
           <Icon className="h-5 w-5" />
         </div>
 
-        {/* Title and optional description */}
+        {/* Title and monospace description */}
         <div className="min-w-0 flex-1">
-          <span className="block truncate text-[14.5px] font-bold leading-snug text-[#0A0A0A] transition-colors group-hover:text-white">
+          <span className="block truncate text-[15px] font-black uppercase leading-snug tracking-tight text-black transition-colors group-hover:text-white">
             {title}
           </span>
           {description && (
-            <span className="mt-0.5 block truncate text-[12.5px] leading-snug text-zinc-500 transition-colors group-hover:text-zinc-300">
+            <span className="mt-0.5 block truncate font-mono text-[12px] font-medium leading-snug text-zinc-600 transition-colors group-hover:text-purple-100">
               {description}
             </span>
           )}
         </div>
       </div>
 
-      {/* Trailing arrow */}
+      {/* Trailing arrow with translation on hover */}
       <div
-        className="flex h-6 w-6 shrink-0 items-center justify-center text-zinc-400 transition-all duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white"
+        className="flex h-7 w-7 shrink-0 items-center justify-center border-2 border-black bg-white text-black transition-all duration-150 group-hover:border-white group-hover:bg-transparent group-hover:text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
         aria-hidden="true"
       >
         <HiArrowUpRight className="h-4 w-4" />
@@ -65,3 +65,4 @@ export default function LinkButton({
     </a>
   );
 }
+

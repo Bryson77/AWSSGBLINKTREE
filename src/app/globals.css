@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 /*
- * AWS SBG @ TUT — Editorial Theme (Inspired by Inkwell Creator Template & Emil Kowalski Motion)
- * Primary colors: Pure Black & White, Accents: Purple (#7C3AED) & AWS Blue (#2563EB)
+ * AWS Student Builder Group — Hardcore Neo-Brutalism Theme
+ * Geometry: 0px sharp corners, 3px solid black borders, 4px hard offset box-shadows.
+ * Colors: Pure Black (#000000), White (#FFFFFF), AWS Electric Purple (#7C3AED), AWS Cyber Blue (#2563EB).
  */
 
 @theme {
-  --color-bg-base: #F8F9FA;
-  --color-bg-subtle: #F1F3F5;
+  --color-bg-base: #F4F4F5;
   --color-bg-card: #FFFFFF;
-  --color-border-subtle: rgba(0, 0, 0, 0.07);
-  --color-border-hover: rgba(0, 0, 0, 0.2);
+  --color-border-brutal: #000000;
+  --color-shadow-brutal: #000000;
 
   /* Primary */
-  --color-primary-black: #0A0A0A;
+  --color-primary-black: #000000;
   --color-primary-white: #FFFFFF;
 
   /* Accents */
@@ -23,8 +23,8 @@
   --color-accent-blue-light: #3B82F6;
 
   /* Text */
-  --color-text-primary: #0A0A0A;
-  --color-text-secondary: #52525B;
+  --color-text-primary: #000000;
+  --color-text-secondary: #3F3F46;
   --color-text-muted: #71717A;
   --color-focus-ring: #7C3AED;
 }
@@ -33,12 +33,12 @@
 
 html {
   scroll-behavior: smooth;
-  background-color: #F8F9FA;
+  background-color: #F4F4F5;
 }
 
 body {
-  background-color: #F8F9FA;
-  color: var(--color-text-primary);
+  background-color: #F4F4F5;
+  color: #000000;
   font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -46,97 +46,45 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading, "Montserrat", sans-serif);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
-/* ── Editorial Paper Texture & Soft Accent Glow ── */
+/* ── Brutalist Background Pattern ──────────────── */
 
-.noise-overlay {
-  position: relative;
+.brutal-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
-.noise-overlay::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.02;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 256px 256px;
-  z-index: 1;
-}
-
-.ambient-glow {
-  position: absolute;
-  top: -12%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(100%, 650px);
-  height: 400px;
-  background: radial-gradient(
-    ellipse at top,
-    rgba(124, 58, 237, 0.08) 0%,
-    rgba(37, 99, 235, 0.05) 50%,
-    rgba(248, 249, 250, 0) 75%
-  );
-  filter: blur(44px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ── Hero Entrance Animations (Emil Kowalski: ease-out, <300-400ms) ── */
-
-@keyframes hero-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-hero {
-  animation: hero-fade-in 340ms cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-.animate-hero-delay-1 { animation-delay: 40ms; }
-.animate-hero-delay-2 { animation-delay: 100ms; }
-.animate-hero-delay-3 { animation-delay: 160ms; }
-.animate-hero-delay-4 { animation-delay: 220ms; }
-
-/* ── Inkwell-Style Link Cards (Elevation + Sweep + Tactile Press) ── */
+/* ── Hardcore Neo-Brutalist Link Cards ─────────── */
 
 .link-button {
   position: relative;
   overflow: hidden;
   background-color: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 12px rgba(0, 0, 0, 0.02);
-  transition:
-    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
-    border-color 180ms cubic-bezier(0.23, 1, 0.32, 1),
-    box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1);
+  border: 3px solid #000000;
+  border-radius: 0px !important;
+  box-shadow: 4px 4px 0px #000000;
+  transition: transform 120ms cubic-bezier(0.2, 0, 0, 1), box-shadow 120ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .link-button::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(110deg, #0A0A0A 0%, #171717 100%);
+  background: #7C3AED;
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
+  transition: transform 160ms cubic-bezier(0.2, 0, 0, 1);
   z-index: 0;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .link-button:hover {
-    transform: translateY(-1.5px);
-    border-color: rgba(0, 0, 0, 0.3);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px #000000;
   }
 
   .link-button:hover::before {
@@ -148,24 +96,82 @@ h1, h2, h3, h4, h5, h6 {
   transform: scaleX(1);
 }
 
-/* Active/pressed: tactile scale-down */
+/* Active / Pressed: tactile mechanical stamp */
 .link-button:active {
-  transform: scale(0.98) translateY(0);
+  transform: translate(2px, 2px) scale(0.98);
+  box-shadow: 1px 1px 0px #000000;
 }
 
-/* Focus ring (WCAG AA) */
+/* Focus ring (WCAG AAA) */
 .link-button:focus-visible {
-  outline: 2px solid var(--color-accent-purple);
-  outline-offset: 2px;
+  outline: 3px solid #000000;
+  outline-offset: 3px;
 }
 
-/* Content above ::before */
+/* Content layer above fill sweep */
 .link-button > * {
   position: relative;
   z-index: 1;
 }
 
-/* ── Reduced motion ── */
+/* ── Brutalist Helper Utilities ─────────────────── */
+
+.brutal-card {
+  background-color: #FFFFFF;
+  border: 3px solid #000000;
+  border-radius: 0px;
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.brutal-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid #000000;
+  border-radius: 0px;
+  box-shadow: 2px 2px 0px #000000;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.brutal-btn {
+  border: 2px solid #000000;
+  border-radius: 0px;
+  box-shadow: 3px 3px 0px #000000;
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
+.brutal-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.brutal-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #000000;
+}
+
+/* ── Entrance Animations ───────────────────────── */
+
+@keyframes brutal-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-hero {
+  animation: brutal-pop-in 220ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.animate-hero-delay-1 { animation-delay: 30ms; }
+.animate-hero-delay-2 { animation-delay: 70ms; }
+.animate-hero-delay-3 { animation-delay: 110ms; }
+.animate-hero-delay-4 { animation-delay: 150ms; }
+
+/* ── Reduced Motion ────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   .animate-hero,
