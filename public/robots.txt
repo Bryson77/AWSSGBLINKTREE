@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Disallow: /admin
+Disallow: /admin/*
+
+Sitemap: https://awssbg.online/sitemap.xml
