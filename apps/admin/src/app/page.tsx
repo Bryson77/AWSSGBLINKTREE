@@ -40,7 +40,7 @@ const PLATFORMS = [
 // ── Login Form ──
 function LoginForm({ onLogin }: { onLogin: () => void }) {
   const [mode, setMode] = useState<"password" | "magic" | "recovery">("password");
-  const [email, setEmail] = useState("lethabomabilo33@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -111,16 +111,16 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
           </div>
 
           <div className="mb-2 inline-block border border-black bg-black px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest text-white shadow-[1px_1px_0px_#7C3AED]">
-            // SYSTEM_CONSOLE
+            // ADMIN_PORTAL
           </div>
 
           <h1 className="text-2xl font-black uppercase tracking-tight text-black">
             awssbg Admin
           </h1>
           <p className="mt-0.5 font-mono text-xs font-semibold text-zinc-600">
-            {mode === "password" && "Dedicated Management Console"}
-            {mode === "magic" && "Passwordless Magic Link"}
-            {mode === "recovery" && "Password Recovery Request"}
+            {mode === "password" && "Authenticate to manage links"}
+            {mode === "magic" && "Sign in via magic link"}
+            {mode === "recovery" && "Request password reset"}
           </p>
         </div>
 
@@ -167,12 +167,13 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
               htmlFor="email"
               className="mb-1 block font-mono text-[11px] font-black uppercase tracking-wider text-black"
             >
-              Admin Email
+              Email
             </label>
             <input
               id="email"
               type="email"
               required
+              placeholder="admin@awssbg.online"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full border-2 border-black bg-white px-3.5 py-2.5 font-mono text-sm text-black outline-none transition-shadow focus:shadow-[3px_3px_0px_#7C3AED]"
@@ -186,7 +187,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
                   htmlFor="password"
                   className="block font-mono text-[11px] font-black uppercase tracking-wider text-black"
                 >
-                  Master Password
+                  Password
                 </label>
                 <button
                   type="button"
@@ -213,7 +214,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
             disabled={loading}
             className="w-full border-2 border-black bg-black py-3 font-mono text-sm font-black uppercase tracking-wider text-white shadow-[4px_4px_0px_#7C3AED] transition-all hover:bg-accent-purple active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50"
           >
-            {loading ? "Processing…" : mode === "password" ? "Authenticate & Enter →" : mode === "magic" ? "Send Magic Link ✉" : "Send Recovery Email ✉"}
+            {loading ? "Authenticating…" : mode === "password" ? "Sign In →" : mode === "magic" ? "Send Magic Link →" : "Send Reset Email →"}
           </button>
         </form>
 
@@ -475,7 +476,7 @@ function Dashboard() {
       <div className="flex min-h-screen items-center justify-center bg-[#F4F4F5]">
         <div className="flex flex-col items-center gap-2 border-[3px] border-black bg-white p-6 shadow-[4px_4px_0px_#000000]">
           <div className="h-6 w-6 animate-spin border-2 border-black border-t-accent-purple" />
-          <p className="font-mono text-xs font-bold uppercase text-black">Loading console…</p>
+          <p className="font-mono text-xs font-bold uppercase text-black">Loading dashboard…</p>
         </div>
       </div>
     );
@@ -690,7 +691,7 @@ function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
       setLoading(false);
     } else {
       toast.success("Password updated successfully!", {
-        description: "Your new master password is now active.",
+        description: "Your new password is now active.",
       });
       setLoading(false);
       onClose();
@@ -705,13 +706,13 @@ function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
       >
         <div className="border-b-2 border-black pb-3">
           <div className="mb-1 inline-block border border-black bg-accent-purple px-2 py-0.2 font-mono text-[9px] font-black text-white">
-            // SECURITY_CREDENTIALS
+            // AUTH_SETTINGS
           </div>
           <h2 className="text-xl font-black uppercase tracking-tight text-black">
-            Set New Password
+            Update Password
           </h2>
           <p className="font-mono text-xs text-zinc-600">
-            Enter your new master admin password.
+            Enter your new password below.
           </p>
         </div>
 
@@ -756,7 +757,7 @@ function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
             disabled={loading}
             className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple disabled:opacity-50"
           >
-            {loading ? "Updating…" : "Save Password →"}
+            {loading ? "Updating…" : "Update Password →"}
           </button>
         </div>
       </form>

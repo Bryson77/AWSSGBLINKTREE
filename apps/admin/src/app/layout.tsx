@@ -18,8 +18,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "awssbg Admin — Management Console",
-  description: "Dedicated link and content manager for AWS Student Builder Group.",
+  title: "awssbg Admin",
+  description: "Link management dashboard for AWS Student Builder Group.",
   robots: {
     index: false,
     follow: false,
