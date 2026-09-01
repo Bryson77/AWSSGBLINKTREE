@@ -1,7 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Admin — AWS SBG Linktree",
+  title: "awssbg Admin — Management Console",
+  description: "Dedicated link and content manager for AWS Student Builder Group.",
   robots: "noindex, nofollow",
 };
 
@@ -12,3 +13,4 @@ export default function AdminLayout({
 }) {
   return <>{children}</>;
 }
+

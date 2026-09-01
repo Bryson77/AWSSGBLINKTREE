@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy": "next build && wrangler pages deploy ./out --project-name=awssbg-linktree"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

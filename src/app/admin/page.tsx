@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * Admin page — Light mode with Black & White primary, Purple & Blue accents.
+ * awssbg Admin — Dedicated Cloud Management Console.
+ * Geometry: 0px sharp corners, 3px solid black borders, hard drop shadows.
  * Authentication: Supabase email/password auth.
- * Full CRUD + Sonner toast feedback.
+ * Supports both admin.awssbg.online and /admin route.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -48,6 +49,7 @@ const PLATFORMS = [
 
 // ── Login Form ──
 function LoginForm({ onLogin }: { onLogin: () => void }) {
+  const [mode, setMode] = useState<"password" | "magic" | "recovery">("password");
   const [email, setEmail] = useState("lethabomabilo33@gmail.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,50 +58,126 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    if (mode === "password") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      toast.error("Authentication failed", {
-        description: error.message,
+      if (error) {
+        toast.error("Authentication failed", { description: error.message });
+        setLoading(false);
+      } else {
+        toast.success("Welcome back!", { description: "Authenticated as " + email });
+        onLogin();
+      }
+    } else if (mode === "magic") {
+      const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/admin` : "https://awssbg.online/admin";
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectUrl },
       });
+
+      if (error) {
+        toast.error("Failed to send login link", { description: error.message });
+      } else {
+        toast.success("Login link dispatched!", {
+          description: "Check your email inbox for your secure sign-in link.",
+        });
+      }
       setLoading(false);
-    } else {
-      toast.success("Welcome back!", {
-        description: "Logged in as " + email,
+    } else if (mode === "recovery") {
+      const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/admin` : "https://awssbg.online/admin";
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
       });
-      onLogin();
+
+      if (error) {
+        toast.error("Password recovery failed", { description: error.message });
+      } else {
+        toast.success("Password reset email sent!", {
+          description: "Check your inbox for the reset link powered by Resend.",
+        });
+        setMode("password");
+      }
+      setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-5">
-      <div className="w-full max-w-sm rounded-2xl border border-black/10 bg-white p-8 shadow-xl">
+    <div className="brutal-grid-bg flex min-h-screen items-center justify-center bg-[#F4F4F5] px-5 py-10">
+      <div className="w-full max-w-sm border-[3px] border-black bg-white p-8 shadow-[6px_6px_0px_#000000]">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-black/10 bg-white p-2 shadow-sm">
+          {/* Boxed Chip Logo Stamp */}
+          <div className="mx-auto mb-3.5 flex h-14 w-14 items-center justify-center border-2 border-black bg-white p-2 shadow-[3px_3px_0px_#000000]">
             <Image
               src="/logo.png"
               alt="AWS SBG Logo"
               width={48}
               height={48}
               className="h-full w-full object-contain"
+              priority
             />
           </div>
-          <h1 className="text-xl font-bold text-[#0A0A0A]">Admin Sign In</h1>
-          <p className="mt-1 text-xs text-zinc-500">
-            AWS SBG @ TUT Linktree Manager
+
+          <div className="mb-2 inline-block border border-black bg-black px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest text-white shadow-[1px_1px_0px_#7C3AED]">
+            // SYSTEM_CONSOLE
+          </div>
+
+          <h1 className="text-2xl font-black uppercase tracking-tight text-black">
+            awssbg Admin
+          </h1>
+          <p className="mt-0.5 font-mono text-xs font-semibold text-zinc-600">
+            {mode === "password" && "Dedicated Management Console"}
+            {mode === "magic" && "Passwordless Magic Link"}
+            {mode === "recovery" && "Password Recovery Request"}
           </p>
+        </div>
+
+        {/* Mode Selector Tabs */}
+        <div className="mb-5 flex border-2 border-black bg-zinc-100 p-1">
+          <button
+            type="button"
+            onClick={() => setMode("password")}
+            className={`flex-1 py-1 font-mono text-[10px] font-black uppercase transition-all ${
+              mode === "password"
+                ? "bg-black text-white shadow-[1px_1px_0px_#000000]"
+                : "text-zinc-600 hover:text-black"
+            }`}
+          >
+            Password
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("magic")}
+            className={`flex-1 py-1 font-mono text-[10px] font-black uppercase transition-all ${
+              mode === "magic"
+                ? "bg-black text-white shadow-[1px_1px_0px_#000000]"
+                : "text-zinc-600 hover:text-black"
+            }`}
+          >
+            Magic Link
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("recovery")}
+            className={`flex-1 py-1 font-mono text-[10px] font-black uppercase transition-all ${
+              mode === "recovery"
+                ? "bg-black text-white shadow-[1px_1px_0px_#000000]"
+                : "text-zinc-600 hover:text-black"
+            }`}
+          >
+            Reset
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label
               htmlFor="email"
-              className="mb-1 block text-xs font-semibold uppercase tracking-wider text-zinc-500"
+              className="mb-1 block font-mono text-[11px] font-black uppercase tracking-wider text-black"
             >
-              Email Address
+              Admin Email
             </label>
             <input
               id="email"
@@ -107,44 +185,55 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] outline-none transition-colors focus:border-accent-purple focus:ring-1 focus:ring-accent-purple"
+              className="w-full border-2 border-black bg-white px-3.5 py-2.5 font-mono text-sm text-black outline-none transition-shadow focus:shadow-[3px_3px_0px_#7C3AED]"
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-xs font-semibold uppercase tracking-wider text-zinc-500"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] outline-none transition-colors focus:border-accent-purple focus:ring-1 focus:ring-accent-purple"
-            />
-          </div>
+          {mode === "password" && (
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block font-mono text-[11px] font-black uppercase tracking-wider text-black"
+                >
+                  Master Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setMode("recovery")}
+                  className="font-mono text-[10px] font-bold text-zinc-500 underline hover:text-accent-purple"
+                >
+                  Forgot?
+                </button>
+              </div>
+              <input
+                id="password"
+                type="password"
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border-2 border-black bg-white px-3.5 py-2.5 font-mono text-sm text-black outline-none transition-shadow focus:shadow-[3px_3px_0px_#7C3AED]"
+              />
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-[#0A0A0A] py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-black/90 active:scale-[0.98] disabled:opacity-50"
+            className="w-full border-2 border-black bg-black py-3 font-mono text-sm font-black uppercase tracking-wider text-white shadow-[4px_4px_0px_#7C3AED] transition-all hover:bg-accent-purple active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50"
           >
-            {loading ? "Authenticating…" : "Sign In to Dashboard"}
+            {loading ? "Processing…" : mode === "password" ? "Authenticate & Enter →" : mode === "magic" ? "Send Magic Link ✉" : "Send Recovery Email ✉"}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 border-t-2 border-black/10 pt-4 text-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-black"
+            className="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-black underline underline-offset-4 hover:text-accent-purple"
           >
             <HiArrowLeft className="h-3.5 w-3.5" />
-            <span>Back to Linktree</span>
+            <span>Return to Public Linktree</span>
           </Link>
         </div>
       </div>
@@ -182,31 +271,36 @@ function LinkEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-5 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-xs">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-4 rounded-2xl border border-black/10 bg-white p-6 shadow-2xl"
+        className="w-full max-w-md space-y-4 border-[3px] border-black bg-white p-6 shadow-[8px_8px_0px_#000000]"
       >
-        <h2 className="text-lg font-bold text-[#0A0A0A]">
-          {isEditing ? "Edit Link" : "Add New Link"}
-        </h2>
+        <div className="border-b-2 border-black pb-3">
+          <h2 className="text-xl font-black uppercase tracking-tight text-black">
+            {isEditing ? "Edit Link Item" : "Create New Link"}
+          </h2>
+          <p className="font-mono text-xs font-medium text-zinc-600">
+            Publish or update a live destination card.
+          </p>
+        </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Title / Label
+          <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+            Title / Display Label
           </label>
           <input
             type="text"
             required
-            placeholder="e.g. AWS Cloud Practitioners Workshop"
+            placeholder="e.g. AWS Certification Study Jam"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] outline-none focus:border-accent-purple"
+            className="w-full border-2 border-black bg-white px-3.5 py-2 text-sm text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
             Destination URL
           </label>
           <input
@@ -215,29 +309,29 @@ function LinkEditor({
             placeholder="https://..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            className="w-full rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] outline-none focus:border-accent-purple"
+            className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
             Platform / Brand Icon
           </label>
           <select
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
-            className="w-full rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] outline-none focus:border-accent-purple"
+            className="w-full border-2 border-black bg-white px-3.5 py-2 text-sm font-semibold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
           >
             {PLATFORMS.map((p) => (
               <option key={p} value={p}>
-                {p.charAt(0).toUpperCase() + p.slice(1)}
+                {p.toUpperCase()}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
             Description Subtext (Optional)
           </label>
           <input
@@ -245,31 +339,33 @@ function LinkEditor({
             placeholder="Short 1-line note"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] outline-none focus:border-accent-purple"
+            className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
           />
         </div>
 
-        <label className="flex items-center gap-2.5 pt-1 text-sm text-zinc-600 cursor-pointer">
+        <label className="flex items-center gap-3 border-2 border-black bg-zinc-100 p-2.5 cursor-pointer">
           <input
             type="checkbox"
             checked={isActive}
             onChange={(e) => setIsActive(e.target.checked)}
-            className="h-4 w-4 rounded accent-accent-purple"
+            className="h-4 w-4 rounded-none accent-black"
           />
-          <span>Show on public Linktree</span>
+          <span className="font-mono text-xs font-bold uppercase text-black">
+            Publish on live Linktree [ACTIVE]
+          </span>
         </label>
 
-        <div className="flex gap-3 pt-3">
+        <div className="flex gap-3 pt-2">
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 rounded-xl border border-black/15 px-4 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 active:scale-95"
+            className="flex-1 border-2 border-black bg-white px-4 py-2.5 font-mono text-xs font-bold uppercase text-black transition-colors hover:bg-zinc-200 active:translate-x-[1px] active:translate-y-[1px]"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="flex-1 rounded-xl bg-[#0A0A0A] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-black/90 active:scale-95"
+            className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
           >
             {isEditing ? "Save Changes" : "Create Link"}
           </button>
@@ -385,111 +481,114 @@ function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent-purple border-t-transparent" />
-          <p className="text-xs text-zinc-500">Loading dashboard…</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#F4F4F5]">
+        <div className="flex flex-col items-center gap-2 border-[3px] border-black bg-white p-6 shadow-[4px_4px_0px_#000000]">
+          <div className="h-6 w-6 animate-spin border-2 border-black border-t-accent-purple" />
+          <p className="font-mono text-xs font-bold uppercase text-black">Loading console…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-5 py-8">
+    <div className="brutal-grid-bg min-h-screen bg-[#F4F4F5] px-5 py-8">
       <div className="mx-auto max-w-2xl">
-        {/* Header */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-black/[0.08] pb-6">
-          <div className="flex items-center gap-3">
-            <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-black/10 bg-white p-1 shadow-sm">
-              <Image
-                src="/logo.png"
-                alt="AWS SBG Logo"
-                width={36}
-                height={36}
-                className="h-full w-full object-contain"
-              />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-[#0A0A0A]">
-                  AWS SBG Linktree
-                </h1>
-                <span className="rounded-full bg-accent-purple/15 px-2.5 py-0.5 text-[10px] font-bold text-accent-purple">
-                  CMS
-                </span>
+        {/* Header Console Box */}
+        <div className="mb-6 border-[3px] border-black bg-white p-5 shadow-[4px_4px_0px_#000000]">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center border-2 border-black bg-white p-1 shadow-[2px_2px_0px_#000000]">
+                <Image
+                  src="/logo.png"
+                  alt="AWS SBG Logo"
+                  width={40}
+                  height={40}
+                  className="h-full w-full object-contain"
+                  priority
+                />
               </div>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                {links.length} total links •{" "}
-                {links.filter((l) => l.is_active).length} active on landing page
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-black uppercase tracking-tight text-black">
+                    awssbg Admin
+                  </h1>
+                  <span className="border border-black bg-accent-purple px-2 py-0.2 font-mono text-[10px] font-black text-white shadow-[1px_1px_0px_#000000]">
+                    CMS
+                  </span>
+                </div>
+                <p className="mt-0.5 font-mono text-xs text-zinc-600">
+                  {links.length} total links •{" "}
+                  {links.filter((l) => l.is_active).length} live
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2.5">
-            <Link
-              href="/"
-              target="_blank"
-              className="rounded-xl border border-black/10 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 shadow-xs transition-all hover:bg-zinc-100"
-            >
-              Preview Live ↗
-            </Link>
-            <button
-              onClick={() => {
-                setEditing(null);
-                setShowEditor(true);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0A0A0A] px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-black/90 active:scale-95"
-            >
-              <HiPlus className="h-3.5 w-3.5" />
-              <span>Add Link</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-medium text-zinc-500 hover:text-black"
-            >
-              Logout
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/"
+                target="_blank"
+                className="border-2 border-black bg-white px-3 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] transition-all hover:bg-zinc-100 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+              >
+                Preview Live ↗
+              </Link>
+              <button
+                onClick={() => {
+                  setEditing(null);
+                  setShowEditor(true);
+                }}
+                className="inline-flex items-center gap-1.5 border-2 border-black bg-black px-3.5 py-1.5 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#7C3AED] transition-all hover:bg-accent-purple active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+              >
+                <HiPlus className="h-3.5 w-3.5" />
+                <span>Add Link</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="border-2 border-black bg-white px-3 py-1.5 font-mono text-xs font-bold text-zinc-600 transition-colors hover:bg-red-50 hover:text-red-600"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Link List */}
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {links.map((link, index) => {
             const Icon = getIconForPlatform(link.platform);
             return (
               <div
                 key={link.id}
-                className={`group flex items-center gap-3.5 rounded-2xl border border-black/[0.08] bg-white p-3.5 shadow-xs transition-all hover:border-black/20 ${
-                  !link.is_active ? "opacity-45" : ""
+                className={`group flex items-center gap-3.5 border-2 border-black bg-white p-3.5 shadow-[3px_3px_0px_#000000] transition-all ${
+                  !link.is_active ? "opacity-50" : ""
                 }`}
               >
-                {/* Platform Icon Badge */}
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-[#0A0A0A]">
-                  <Icon className="h-4 w-4" aria-hidden="true" />
+                {/* Platform Icon Stamp */}
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-black bg-zinc-100 text-black">
+                  <Icon className="h-5 w-5" aria-hidden="true" />
                 </div>
 
                 {/* Info */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-[#0A0A0A]">
+                    <p className="truncate text-sm font-black uppercase tracking-tight text-black">
                       {link.title}
                     </p>
                     {!link.is_active && (
-                      <span className="rounded bg-zinc-100 px-1.5 py-0.2 text-[10px] text-zinc-500">
-                        Hidden
+                      <span className="border border-black bg-zinc-200 px-1.5 py-0.2 font-mono text-[9px] font-bold text-zinc-600">
+                        HIDDEN
                       </span>
                     )}
                   </div>
-                  <p className="truncate text-xs text-zinc-400">{link.url}</p>
+                  <p className="truncate font-mono text-xs text-zinc-500">{link.url}</p>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   {/* Move Up */}
                   <button
                     onClick={() => handleMoveUp(index)}
                     disabled={index === 0}
-                    className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-[#0A0A0A] disabled:opacity-20"
+                    className="border border-black bg-white p-1.5 text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 disabled:opacity-20 active:translate-x-[1px] active:translate-y-[1px]"
                     aria-label="Move up"
                     title="Move up"
                   >
@@ -500,7 +599,7 @@ function Dashboard() {
                   <button
                     onClick={() => handleMoveDown(index)}
                     disabled={index === links.length - 1}
-                    className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-[#0A0A0A] disabled:opacity-20"
+                    className="border border-black bg-white p-1.5 text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 disabled:opacity-20 active:translate-x-[1px] active:translate-y-[1px]"
                     aria-label="Move down"
                     title="Move down"
                   >
@@ -510,14 +609,14 @@ function Dashboard() {
                   {/* Toggle Active */}
                   <button
                     onClick={() => handleToggleActive(link)}
-                    className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors ${
+                    className={`border border-black px-2 py-1 font-mono text-[10px] font-black uppercase shadow-[1px_1px_0px_#000000] transition-colors ${
                       link.is_active
-                        ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-                        : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
+                        ? "bg-emerald-300 text-black hover:bg-emerald-400"
+                        : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"
                     }`}
                     title={link.is_active ? "Click to hide" : "Click to show"}
                   >
-                    {link.is_active ? "Active" : "Hidden"}
+                    {link.is_active ? "LIVE" : "DRAFT"}
                   </button>
 
                   {/* Edit */}
@@ -526,7 +625,7 @@ function Dashboard() {
                       setEditing(link);
                       setShowEditor(true);
                     }}
-                    className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-[#0A0A0A]"
+                    className="border border-black bg-white p-1.5 text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100"
                     aria-label="Edit link"
                     title="Edit"
                   >
@@ -536,7 +635,7 @@ function Dashboard() {
                   {/* Delete */}
                   <button
                     onClick={() => handleDelete(link.id, link.title)}
-                    className="rounded-lg p-1.5 text-red-500/70 transition-colors hover:bg-red-50 hover:text-red-600"
+                    className="border border-black bg-white p-1.5 text-red-600 shadow-[1px_1px_0px_#000000] hover:bg-red-50"
                     aria-label="Delete link"
                     title="Delete"
                   >
@@ -549,9 +648,9 @@ function Dashboard() {
         </div>
 
         {links.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-black/15 bg-white py-16 text-center">
-            <p className="text-sm text-zinc-500">
-              No links yet. Click &quot;Add Link&quot; above to create your first button.
+          <div className="border-[3px] border-dashed border-black bg-white py-16 text-center shadow-[4px_4px_0px_#000000]">
+            <p className="font-mono text-xs font-bold uppercase text-zinc-600">
+              No links currently published. Click &quot;Add Link&quot; above to create one.
             </p>
           </div>
         )}
@@ -572,9 +671,109 @@ function Dashboard() {
   );
 }
 
+// ── Password Reset / Update Modal ──
+function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleUpdatePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      toast.error("Password update failed", { description: error.message });
+      setLoading(false);
+    } else {
+      toast.success("Password updated successfully!", {
+        description: "Your new master password is now active.",
+      });
+      setLoading(false);
+      onClose();
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-xs">
+      <form
+        onSubmit={handleUpdatePassword}
+        className="w-full max-w-sm space-y-4 border-[3px] border-black bg-white p-6 shadow-[8px_8px_0px_#000000]"
+      >
+        <div className="border-b-2 border-black pb-3">
+          <div className="mb-1 inline-block border border-black bg-accent-purple px-2 py-0.2 font-mono text-[9px] font-black text-white">
+            // SECURITY_CREDENTIALS
+          </div>
+          <h2 className="text-xl font-black uppercase tracking-tight text-black">
+            Set New Password
+          </h2>
+          <p className="font-mono text-xs text-zinc-600">
+            Enter your new master admin password.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+            New Password
+          </label>
+          <input
+            type="password"
+            required
+            placeholder="••••••••"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+            Confirm Password
+          </label>
+          <input
+            type="password"
+            required
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+          />
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 border-2 border-black bg-white px-4 py-2.5 font-mono text-xs font-bold uppercase text-black transition-colors hover:bg-zinc-200"
+          >
+            Later
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple disabled:opacity-50"
+          >
+            {loading ? "Updating…" : "Save Password →"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 // ── Page Root ──
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [isRecovery, setIsRecovery] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -583,8 +782,11 @@ export default function AdminPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setAuthed(!!session);
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecovery(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -592,8 +794,8 @@ export default function AdminPage() {
 
   if (authed === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent-purple border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-[#F4F4F5]">
+        <div className="h-6 w-6 animate-spin border-2 border-black border-t-accent-purple" />
       </div>
     );
   }
@@ -602,5 +804,14 @@ export default function AdminPage() {
     return <LoginForm onLogin={() => setAuthed(true)} />;
   }
 
-  return <Dashboard />;
+  return (
+    <>
+      <Dashboard />
+      {isRecovery && (
+        <PasswordUpdateModal onClose={() => setIsRecovery(false)} />
+      )}
+    </>
+  );
 }
+
+
