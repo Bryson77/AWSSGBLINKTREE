@@ -1,7 +1,6 @@
 /**
- * Hero — tailored specifically for AWS Student Builder Group at Tshwane University of Technology.
- * Light mode poster theme: Black & White primary, Purple & Blue accents, subtle geometric shapes.
- * Featuring the official AWS SBG chip logo mark.
+ * Hero — Inkwell-inspired editorial layout for AWS SBG @ TUT.
+ * Primary: Black & White, Accents: Purple & Blue, Montserrat bold headings.
  */
 
 import Image from "next/image";
@@ -14,15 +13,14 @@ import {
 
 export default function Hero() {
   return (
-    <section className="noise-overlay relative w-full overflow-hidden bg-white pt-9 pb-5">
+    <section className="noise-overlay relative w-full overflow-hidden pt-10 pb-4">
       {/* Ambient soft purple & blue glow backdrop */}
       <div className="ambient-glow" aria-hidden="true" />
 
-      {/* Subtle Geometric Background Shapes (matching poster aesthetic) */}
+      {/* Subtle Geometric Background Wireframes */}
       <div className="pointer-events-none absolute inset-0 z-0 select-none overflow-hidden" aria-hidden="true">
-        {/* Top-left geometric block outline */}
         <svg
-          className="absolute -top-6 -left-12 h-44 w-44 text-black/[0.03]"
+          className="absolute -top-6 -left-12 h-48 w-48 text-black/[0.035]"
           viewBox="0 0 100 100"
           fill="none"
           stroke="currentColor"
@@ -32,9 +30,8 @@ export default function Hero() {
           <path d="M50 0v20M50 80v20M0 50h20M80 50h20" />
         </svg>
 
-        {/* Top-right floating geometric diamond/cross */}
         <svg
-          className="absolute top-12 -right-8 h-36 w-36 text-accent-purple/[0.05]"
+          className="absolute top-10 -right-8 h-40 w-40 text-accent-purple/[0.06]"
           viewBox="0 0 100 100"
           fill="none"
           stroke="currentColor"
@@ -44,9 +41,8 @@ export default function Hero() {
           <circle cx="50" cy="50" r="3" fill="currentColor" />
         </svg>
 
-        {/* Bottom-left subtle circuit line */}
         <svg
-          className="absolute -bottom-10 left-1/4 h-28 w-48 text-accent-blue/[0.05]"
+          className="absolute -bottom-8 left-1/3 h-28 w-48 text-accent-blue/[0.05]"
           viewBox="0 0 200 100"
           fill="none"
           stroke="currentColor"
@@ -60,7 +56,7 @@ export default function Hero() {
 
       <div className="relative z-10 mx-auto max-w-[500px] px-5 text-center">
         {/* Featured AWS SBG Chip Logo Mark */}
-        <div className="animate-hero animate-hero-delay-1 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-black/[0.08] bg-white p-2.5 shadow-md shadow-black/[0.04]">
+        <div className="animate-hero animate-hero-delay-1 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-black/[0.08] bg-white p-2.5 shadow-md shadow-black/[0.03]">
           <Image
             src="/logo.png"
             alt="AWS Student Builder Group TUT Logo"
@@ -71,8 +67,8 @@ export default function Hero() {
           />
         </div>
 
-        {/* Chapter Eyebrow Badge */}
-        <div className="animate-hero animate-hero-delay-1 mb-3.5 inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-zinc-50 px-3.5 py-1 shadow-xs">
+        {/* Chapter Eyebrow Pill */}
+        <div className="animate-hero animate-hero-delay-1 mb-3.5 inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-white px-3.5 py-1 shadow-xs">
           <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-accent-purple">
             TUT Chapter
           </span>
@@ -82,8 +78,8 @@ export default function Hero() {
           </span>
         </div>
 
-        {/* Main Headline */}
-        <h1 className="animate-hero animate-hero-delay-2 mb-3 text-[28px] font-black uppercase leading-[1.15] tracking-tight text-[#0A0A0A] sm:text-[34px]">
+        {/* Main Headline with Montserrat */}
+        <h1 className="animate-hero animate-hero-delay-2 mb-3 text-[30px] font-black uppercase leading-[1.12] tracking-tight text-[#0A0A0A] sm:text-[36px]">
           Build, Certify &amp; Connect <br className="hidden sm:inline" />
           <span className="bg-gradient-to-r from-accent-purple via-[#6366F1] to-accent-blue bg-clip-text text-transparent">
             In The Cloud
@@ -91,30 +87,30 @@ export default function Hero() {
         </h1>
 
         {/* Subtext */}
-        <p className="animate-hero animate-hero-delay-3 mx-auto max-w-[430px] text-[14px] leading-relaxed text-zinc-600 sm:text-[15px]">
-          Tshwane University of Technology&apos;s official student cloud community.
+        <p className="animate-hero animate-hero-delay-3 mx-auto max-w-[430px] text-[14px] leading-relaxed text-zinc-600 sm:text-[14.5px]">
+          Tshwane University of Technology&apos;s student cloud community.
           Hands-on AWS Study Jams, Cloud Practitioner &amp; Solutions Architect certification prep,
           hackathons, and industry mentorship.
         </p>
 
-        {/* Core Pillars Micro-badges (Clean SVG Icons, Zero Emojis) */}
+        {/* Core Pillars Micro-badges */}
         <div className="animate-hero animate-hero-delay-4 mt-5 flex flex-wrap items-center justify-center gap-1.5 text-[11px] font-medium text-zinc-600">
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.08] bg-white px-2.5 py-1 shadow-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.08] bg-white px-2.5 py-1 shadow-2xs">
             <HiOutlineBolt className="h-3.5 w-3.5 text-accent-purple" aria-hidden="true" />
             <span>AWS Study Jams</span>
           </span>
           <span className="text-zinc-300" aria-hidden="true">•</span>
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.08] bg-white px-2.5 py-1 shadow-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.08] bg-white px-2.5 py-1 shadow-2xs">
             <HiOutlineAcademicCap className="h-3.5 w-3.5 text-accent-blue" aria-hidden="true" />
             <span>Cert Vouchers</span>
           </span>
           <span className="text-zinc-300" aria-hidden="true">•</span>
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.08] bg-white px-2.5 py-1 shadow-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.08] bg-white px-2.5 py-1 shadow-2xs">
             <HiOutlineCloud className="h-3.5 w-3.5 text-accent-purple" aria-hidden="true" />
             <span>Cloud Quest</span>
           </span>
           <span className="text-zinc-300" aria-hidden="true">•</span>
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.08] bg-white px-2.5 py-1 shadow-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.08] bg-white px-2.5 py-1 shadow-2xs">
             <HiOutlineCube className="h-3.5 w-3.5 text-accent-blue" aria-hidden="true" />
             <span>Cloud Projects</span>
           </span>
