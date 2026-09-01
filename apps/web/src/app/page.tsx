@@ -1,6 +1,6 @@
 /**
  * Landing Page — AWS Student Builder Group
- * Public Linktree layout (Zero admin code).
+ * Public AWS SBG site layout (Zero admin code).
  */
 
 import Header from "@/components/Header";

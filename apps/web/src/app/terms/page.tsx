@@ -64,7 +64,7 @@ export default function TermsPage() {
                   1. Acceptance of Terms
                 </h2>
                 <p>
-                  By accessing or using the AWS SBG Linktree website, you agree to comply with and be bound by these Terms
+                  By accessing or using the AWS SBG website, you agree to comply with and be bound by these Terms
                   of Service. If you do not agree with any part of these terms, please do not use this portal.
                 </p>
               </section>

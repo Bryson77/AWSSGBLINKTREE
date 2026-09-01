@@ -1,3 +1,4 @@
+# Allow all web search engines and AI crawlers
 User-agent: *
 Allow: /
 Allow: /privacy
@@ -5,4 +6,43 @@ Allow: /terms
 Disallow: /admin
 Disallow: /admin/*
 
+# AI Crawlers & LLM Scrapers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# Sitemaps & LLM Context Files
 Sitemap: https://awssbg.online/sitemap.xml
+# LLMs site context: https://awssbg.online/llms.txt

@@ -1,0 +1,17 @@
+﻿# AWS Student Builder Group (AWS SBG)
+
+> Official student-led cloud computing community affiliated with and supported by Amazon Web Services (AWS).
+
+AWS Student Builder Group (AWS SBG) is a global, student-led community program powered by Amazon Web Services (AWS) across 60+ countries. The group empowers students, developers, and aspiring cloud architects to explore cloud computing, build real-world software, and accelerate tech careers.
+
+## Core Pillars & Activities
+- **AWS Study Jams & Workshops:** Hands-on technical sessions covering EC2, S3, Lambda, Serverless, Containers, and Generative AI on AWS.
+- **Certification Preparation:** Structured study paths and exam vouchers for AWS Certified Cloud Practitioner and AWS Certified Solutions Architect.
+- **Hackathons & Build Challenges:** Collaborative builder sprints solving real-world challenges using AWS cloud infrastructure.
+- **Career & Mentorship:** Direct connections to AWS Community Heroes, Campus Leaders, and industry cloud architects.
+
+## Official Links & Resources
+- Main Community Hub: https://awssbg.online
+- Privacy Policy: https://awssbg.online/privacy
+- Terms of Service: https://awssbg.online/terms
+- Full AI Context: https://awssbg.online/llms-full.txt

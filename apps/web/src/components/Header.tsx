@@ -32,7 +32,7 @@ export default function Header() {
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copied to clipboard!", {
-        description: "Share the AWS SBG Linktree with fellow builders.",
+        description: "Share the AWS SBG site with fellow builders.",
       });
     } catch {
       toast.error("Couldn't copy link. Please copy the URL from your browser.");
@@ -63,8 +63,8 @@ export default function Header() {
         <button
           onClick={handleShare}
           className="group flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000000] transition-all hover:bg-black hover:text-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-          aria-label="Share Linktree"
-          title="Share Linktree"
+          aria-label="Share AWS SBG site"
+          title="Share AWS SBG site"
         >
           <HiOutlineShare className="h-4 w-4 transition-transform group-hover:scale-110" />
         </button>

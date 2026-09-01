@@ -1,10 +1,11 @@
-# Project Rules & Persistent Memory — AWS Student Builder Group Linktree
+# Project Rules & Persistent Memory — AWS Student Builder Group
 
 ## 1. Brand & AWS Affiliation
 - **Official Affiliation:** AWS Student Builder Group (SBG) is an official student-led community affiliated with, powered by, and supported by **Amazon Web Services (AWS)**.
 - **Brand Framing:** It is student-led and student-maintained to deliver AWS Study Jams, Cloud Practitioner & Solutions Architect certification prep, and hackathons.
 - **Zero Data Sale:** Personal data is strictly never sold, rented, or traded.
-- **No TUT specifics:** Community branding is unified cleanly as **AWS Student Builder Group** (`AWS SBG`).
+
+- **Zero "Linktree" Mentions:** STRICTLY NEVER use the trademark word "Linktree" anywhere on the site, meta tags, headers, footers, copy, or UI. Refer to the platform solely as **AWS SBG site** or **AWS Student Builder Group**.
 
 ## 2. Agent Workflow & Communication Rule
 - **Mandatory Update Before Action:** ALWAYS update and notify the user BEFORE triggering builds, Cloudflare deployments, or git commits. Never commit or deploy silently without clear user alignment.

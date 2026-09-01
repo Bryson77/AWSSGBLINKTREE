@@ -77,7 +77,7 @@ export default function PrivacyPage() {
                 <ul className="list-disc space-y-1.5 pl-5 font-mono text-xs">
                   <li>
                     <strong>Public Visitors:</strong> Zero tracking cookies, zero marketing pixels, and zero personal analytics.
-                    Visiting this Linktree is completely anonymous.
+                    Visiting this site is completely anonymous.
                   </li>
                   <li>
                     <strong>Admin Users:</strong> Email address and encrypted session credentials strictly to authenticate

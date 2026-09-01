@@ -225,7 +225,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-black underline underline-offset-4 hover:text-accent-purple"
           >
-            <span>Visit Public Linktree ↗</span>
+            <span>Visit Public Site ↗</span>
           </a>
         </div>
       </div>
@@ -343,7 +343,7 @@ function LinkEditor({
             className="h-4 w-4 rounded-none accent-black"
           />
           <span className="font-mono text-xs font-bold uppercase text-black">
-            Publish on live Linktree [ACTIVE]
+            Publish on live site [ACTIVE]
           </span>
         </label>
 
