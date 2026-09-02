@@ -9,12 +9,14 @@
   "scripts": {
     "dev:web": "npm run dev --workspace=web",
     "dev:admin": "npm run dev --workspace=admin",
+    "dev:email": "npm run dev --workspace=email-worker",
     "build:web": "npm run build --workspace=web",
     "build:admin": "npm run build --workspace=admin",
     "build": "npm run build --workspaces",
     "deploy:web": "npm run deploy --workspace=web",
     "deploy:admin": "npm run deploy --workspace=admin",
-    "deploy:all": "npm run deploy:web && npm run deploy:admin"
+    "deploy:email": "npm run deploy --workspace=email-worker",
+    "deploy:all": "npm run deploy:web && npm run deploy:admin && npm run deploy:email"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

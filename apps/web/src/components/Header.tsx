@@ -1,15 +1,35 @@
 "use client";
 
 /**
- * Header — Hardcore Neo-Brutalist brand strip with AWS SBG chip logo.
- * Geometry: 0px sharp corners, 3px solid black border, 2px hard shadow.
+ * Header — Hardcore Neo-Brutalist Top Navbar.
+ * Navigation: Home (/), About (/about), Contact (/contact), Native Share & Mobile Drawer.
+ * Geometry: 0px sharp corners, 3px solid black border, 2px/4px hard shadow.
  */
 
+import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { HiOutlineShare } from "react-icons/hi2";
+import {
+  HiOutlineShare,
+  HiOutlineBars3,
+  HiOutlineXMark,
+  HiOutlineHome,
+  HiOutlineInformationCircle,
+  HiOutlineEnvelope,
+} from "react-icons/hi2";
+
+const NAV_LINKS = [
+  { href: "/", label: "Home", icon: HiOutlineHome },
+  { href: "/about", label: "About", icon: HiOutlineInformationCircle },
+  { href: "/contact", label: "Contact", icon: HiOutlineEnvelope },
+];
 
 export default function Header() {
+  const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const handleShare = async () => {
     const url = typeof window !== "undefined" ? window.location.origin : "https://awssbg.online";
     const shareData = {
@@ -40,11 +60,11 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b-[3px] border-black bg-white pt-[env(safe-area-inset-top)]">
-      <div className="mx-auto flex h-[54px] sm:h-[58px] max-w-[500px] items-center justify-between px-4 sm:px-5">
+    <header className="sticky top-0 z-40 w-full border-b-[3px] border-black bg-white pt-[env(safe-area-inset-top)]">
+      <div className="mx-auto flex h-[58px] sm:h-[62px] max-w-[720px] items-center justify-between px-4 sm:px-6">
         {/* Brand logo + Wordmark */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center border-2 border-black bg-white p-1 shadow-[2px_2px_0px_#000000]">
+        <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group no-underline">
+          <div className="relative flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center border-2 border-black bg-white p-1 shadow-[2px_2px_0px_#000000] transition-transform group-hover:scale-105">
             <Image
               src="/logo.png"
               alt="AWS SBG Logo"
@@ -57,18 +77,81 @@ export default function Header() {
           <span className="font-mono text-[12px] sm:text-[13px] font-black uppercase tracking-wider text-black">
             AWS SBG <span className="text-accent-purple">//</span> BUILDERS
           </span>
-        </div>
+        </Link>
 
-        {/* Share Button (Mobile 44px min tap target touch area) */}
-        <button
-          onClick={handleShare}
-          className="group flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000000] transition-all hover:bg-black hover:text-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-          aria-label="Share AWS SBG site"
-          title="Share AWS SBG site"
-        >
-          <HiOutlineShare className="h-4 w-4 transition-transform group-hover:scale-110" />
-        </button>
+        {/* Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-1.5 font-mono text-[12px] font-black uppercase">
+          {NAV_LINKS.map((link) => {
+            const isActive = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-3 py-1.5 border-2 transition-all ${
+                  isActive
+                    ? "border-black bg-black text-white shadow-[2px_2px_0px_#7C3AED]"
+                    : "border-transparent text-black hover:border-black hover:bg-zinc-100"
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Actions (Share + Mobile Menu Button) */}
+        <div className="flex items-center gap-2">
+          {/* Share Button */}
+          <button
+            onClick={handleShare}
+            className="group flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000000] transition-all hover:bg-black hover:text-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer"
+            aria-label="Share AWS SBG site"
+            title="Share AWS SBG site"
+          >
+            <HiOutlineShare className="h-4 w-4 transition-transform group-hover:scale-110" />
+          </button>
+
+          {/* Mobile Menu Hamburger Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden flex h-9 w-9 items-center justify-center border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000000] transition-all hover:bg-black hover:text-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer"
+            aria-label={mobileMenuOpen ? "Close menu" : "Open navigation menu"}
+          >
+            {mobileMenuOpen ? (
+              <HiOutlineXMark className="h-5 w-5" />
+            ) : (
+              <HiOutlineBars3 className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Drawer Navigation */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t-[3px] border-black bg-white px-4 py-4 shadow-[0px_6px_0px_#000000]">
+          <div className="flex flex-col gap-2">
+            {NAV_LINKS.map((link) => {
+              const Icon = link.icon;
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 border-2 font-mono text-[13px] font-black uppercase transition-all ${
+                    isActive
+                      ? "border-black bg-black text-white shadow-[3px_3px_0px_#7C3AED]"
+                      : "border-black bg-white text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{link.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </header>
   );
 }

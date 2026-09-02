@@ -1,17 +1,20 @@
+"use client";
+
 /**
  * LinkButton — Hardcore Neo-Brutalist Link Card.
- * Geometry: 0px sharp corners, 3px solid black border, 4px hard shadow.
- * Micro-interactions:
+ * Features:
  *  - Slide-fill sweep to Electric Purple on hover
  *  - High contrast text/icon inversion to pure white
  *  - Directional arrow translation & rotation on hover
  *  - Tactile scale(0.98) & translate(2px, 2px) on active click
+ *  - Asynchronous link click telemetry recording
  */
 
-import { getIconForPlatform } from "@awssbg/shared";
+import { supabase, getIconForPlatform } from "@awssbg/shared";
 import { HiArrowUpRight } from "react-icons/hi2";
 
 interface LinkButtonProps {
+  id: string;
   title: string;
   url: string;
   platform: string;
@@ -19,6 +22,7 @@ interface LinkButtonProps {
 }
 
 export default function LinkButton({
+  id,
   title,
   url,
   platform,
@@ -26,12 +30,35 @@ export default function LinkButton({
 }: LinkButtonProps) {
   const Icon = getIconForPlatform(platform);
 
+  const handleClick = () => {
+    try {
+      // Fire-and-forget telemetry increment
+      supabase.rpc("increment_link_clicks", { target_link_id: id }).then(({ error }) => {
+        if (error) {
+          // Fallback direct increment if RPC is not deployed yet
+          supabase
+            .from("links")
+            .select("click_count")
+            .eq("id", id)
+            .single()
+            .then(({ data }) => {
+              const current = data?.click_count ?? 0;
+              supabase.from("links").update({ click_count: current + 1 }).eq("id", id);
+            });
+        }
+      });
+    } catch {
+      // Non-blocking telemetry
+    }
+  };
+
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group link-button flex w-full items-center justify-between gap-3 px-3.5 sm:px-4 py-3 sm:py-3.5 text-left no-underline"
+      onClick={handleClick}
+      className="group link-button flex w-full items-center justify-between gap-3 px-3.5 sm:px-4 py-3 sm:py-3.5 text-left no-underline cursor-pointer"
     >
       <div className="flex min-w-0 items-center gap-3 sm:gap-3.5">
         {/* Platform icon stamp */}

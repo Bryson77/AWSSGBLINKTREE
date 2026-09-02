@@ -3,13 +3,14 @@
 /**
  * awssbg Admin — Dedicated Cloud Management Console (Standalone App).
  * Geometry: 0px sharp corners, 3px solid black borders, hard drop shadows.
+ * Navigation: Collapsible Neo-Brutalist Left Sidebar (Dashboard, Analytics, Links, Inquiries, Settings/Team).
  * Authentication: Supabase email/password, magic link, password recovery.
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { supabase, LinkItem, getIconForPlatform } from "@awssbg/shared";
+import { supabase, LinkItem, InquiryItem, getIconForPlatform } from "@awssbg/shared";
 import {
   HiOutlineTrash,
   HiOutlinePencilSquare,
@@ -21,24 +22,36 @@ import {
   HiOutlineCheck,
   HiOutlineXMark,
   HiOutlineUserPlus,
+  HiOutlineSquares2X2,
+  HiOutlineChartBar,
+  HiOutlineLink,
+  HiOutlineEnvelope,
+  HiOutlineArrowRightOnRectangle,
+  HiOutlineArrowTopRightOnSquare,
+  HiOutlineChevronLeft,
+  HiOutlineChevronRight,
+  HiOutlineBars3,
+  HiOutlineEye,
+  HiOutlineSparkles,
 } from "react-icons/hi2";
 
 const PLATFORMS = [
+  "aws",
+  "aws-skill-builder",
   "meetup",
   "whatsapp",
-  "linkedin",
-  "instagram",
-  "x",
   "discord",
+  "linkedin",
   "github",
   "youtube",
+  "instagram",
+  "x",
   "tiktok",
-  "aws",
+  "facebook",
+  "telegram",
   "medium",
   "devto",
   "hashnode",
-  "facebook",
-  "telegram",
   "website",
 ] as const;
 
@@ -112,7 +125,6 @@ function PasswordStrengthMeter({ password }: { password: string }) {
         </span>
       </div>
 
-      {/* Segmented Meter */}
       <div className="grid grid-cols-4 gap-1">
         {[1, 2, 3, 4].map((bar) => (
           <div
@@ -124,11 +136,10 @@ function PasswordStrengthMeter({ password }: { password: string }) {
         ))}
       </div>
 
-      {/* Rules Checklist */}
       <div className="grid grid-cols-2 gap-1 font-mono text-[10px] text-zinc-700 pt-1">
         <div className={`flex items-center gap-1 ${analysis.checks.length8 ? "text-emerald-700 font-bold" : ""}`}>
           {analysis.checks.length8 ? <HiOutlineCheck className="h-3 w-3" /> : <HiOutlineXMark className="h-3 w-3" />}
-          <span>Min 8 characters</span>
+          <span>Min 8 chars</span>
         </div>
         <div className={`flex items-center gap-1 ${analysis.checks.mixedCase ? "text-emerald-700 font-bold" : ""}`}>
           {analysis.checks.mixedCase ? <HiOutlineCheck className="h-3 w-3" /> : <HiOutlineXMark className="h-3 w-3" />}
@@ -149,67 +160,57 @@ function PasswordStrengthMeter({ password }: { password: string }) {
 
 // ── Login Form ──
 function LoginForm({ onLogin }: { onLogin: () => void }) {
-  const [mode, setMode] = useState<"password" | "magic" | "recovery">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"password" | "magic" | "recovery">("password");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
-    if (mode === "password") {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        toast.error("Authentication failed", { description: error.message });
-        setLoading(false);
-      } else {
-        toast.success("Welcome back!", { description: "Authenticated as " + email });
+    try {
+      if (mode === "password") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        toast.success("Authenticated as Admin");
+        // Dispatch security notification
+        fetch("/api/notify-auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "login", email }),
+        }).catch(() => {});
         onLogin();
-      }
-    } else if (mode === "magic") {
-      const redirectUrl = typeof window !== "undefined" ? window.location.origin : "https://admin.awssbg.online";
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: redirectUrl },
-      });
-
-      if (error) {
-        toast.error("Failed to send login link", { description: error.message });
-      } else {
-        toast.success("Login link dispatched!", {
-          description: "Check your email inbox for your secure sign-in link.",
+      } else if (mode === "magic") {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: { emailRedirectTo: window.location.origin },
+        });
+        if (error) throw error;
+        toast.success("Magic link dispatched", {
+          description: `Check ${email} for your passwordless sign-in token.`,
+        });
+      } else if (mode === "recovery") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        });
+        if (error) throw error;
+        toast.success("Recovery email sent", {
+          description: `Check ${email} for password reset instructions.`,
         });
       }
-      setLoading(false);
-    } else if (mode === "recovery") {
-      const redirectUrl = typeof window !== "undefined" ? window.location.origin : "https://admin.awssbg.online";
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
-      });
-
-      if (error) {
-        toast.error("Password recovery failed", { description: error.message });
-      } else {
-        toast.success("Password reset email sent!", {
-          description: "Check your inbox for the reset link powered by Resend.",
-        });
-        setMode("password");
-      }
+    } catch (err) {
+      toast.error("Authentication failed", { description: (err as Error).message });
+    } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="brutal-grid-bg flex min-h-screen items-center justify-center bg-[#F4F4F5] px-5 py-10">
-      <div className="w-full max-w-sm border-[3px] border-black bg-white p-8 shadow-[6px_6px_0px_#000000]">
+    <div className="brutal-grid-bg flex min-h-screen items-center justify-center bg-[#F4F4F5] p-5">
+      <div className="w-full max-w-sm border-[3px] border-black bg-white p-6 sm:p-8 shadow-[8px_8px_0px_#000000]">
         <div className="mb-6 text-center">
-          {/* Boxed Chip Logo Stamp */}
-          <div className="mx-auto mb-3.5 flex h-14 w-14 items-center justify-center border-2 border-black bg-white p-2 shadow-[3px_3px_0px_#000000]">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center border-2 border-black bg-white p-2 shadow-[3px_3px_0px_#000000]">
             <Image
               src="/logo.png"
               alt="AWS SBG Logo"
@@ -219,23 +220,18 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
               priority
             />
           </div>
-
-          <div className="mb-2 inline-block border border-black bg-black px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest text-white shadow-[1px_1px_0px_#7C3AED]">
-            // ADMIN_PORTAL
+          <div className="mb-1 inline-block border-2 border-black bg-black px-2.5 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest text-white shadow-[2px_2px_0px_#7C3AED]">
+            // AWS_SBG_MGMT
           </div>
-
           <h1 className="text-2xl font-black uppercase tracking-tight text-black">
-            awssbg Admin
+            Admin Portal
           </h1>
-          <p className="mt-0.5 font-mono text-xs font-semibold text-zinc-600">
-            {mode === "password" && "Authenticate to manage links"}
-            {mode === "magic" && "Sign in via magic link"}
-            {mode === "recovery" && "Request password reset"}
+          <p className="mt-1 font-mono text-xs font-semibold text-zinc-600">
+            Dedicated Cloud Management Console
           </p>
         </div>
 
-        {/* Mode Selector Tabs */}
-        <div className="mb-5 flex border-2 border-black bg-zinc-100 p-1">
+        <div className="mb-5 flex border-2 border-black bg-zinc-100 p-0.5">
           <button
             type="button"
             onClick={() => setMode("password")}
@@ -277,7 +273,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
               htmlFor="email"
               className="mb-1 block font-mono text-[11px] font-black uppercase tracking-wider text-black"
             >
-              Email
+              Email Address
             </label>
             <input
               id="email"
@@ -302,7 +298,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
                 <button
                   type="button"
                   onClick={() => setMode("recovery")}
-                  className="font-mono text-[10px] font-bold text-zinc-500 underline hover:text-accent-purple"
+                  className="font-mono text-[10px] font-bold text-zinc-500 underline hover:text-accent-purple cursor-pointer"
                 >
                   Forgot?
                 </button>
@@ -322,7 +318,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full border-2 border-black bg-black py-3 font-mono text-sm font-black uppercase tracking-wider text-white shadow-[4px_4px_0px_#7C3AED] transition-all hover:bg-accent-purple active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50"
+            className="w-full border-2 border-black bg-black py-3 font-mono text-sm font-black uppercase tracking-wider text-white shadow-[4px_4px_0px_#7C3AED] transition-all hover:bg-accent-purple active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Authenticating…" : mode === "password" ? "Sign In →" : mode === "magic" ? "Send Magic Link →" : "Send Reset Email →"}
           </button>
@@ -373,14 +369,14 @@ function LinkEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-5 backdrop-blur-xs">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-4 border-[3px] border-black bg-white p-6 shadow-[8px_8px_0px_#000000]"
+        className="w-full max-w-md space-y-4 border-[3px] border-black bg-white p-5 sm:p-6 shadow-[8px_8px_0px_#000000]"
       >
         <div className="border-b-2 border-black pb-3">
           <h2 className="text-xl font-black uppercase tracking-tight text-black">
-            {isEditing ? "Edit Link Item" : "Create New Link"}
+            {isEditing ? "Edit Link Card" : "Create New Link"}
           </h2>
           <p className="font-mono text-xs font-medium text-zinc-600">
             Publish or update a live destination card.
@@ -422,7 +418,7 @@ function LinkEditor({
           <select
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
-            className="w-full border-2 border-black bg-white px-3.5 py-2 text-sm font-semibold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+            className="w-full border-2 border-black bg-white px-3.5 py-2 text-sm font-semibold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED] cursor-pointer"
           >
             {PLATFORMS.map((p) => (
               <option key={p} value={p}>
@@ -461,13 +457,13 @@ function LinkEditor({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 border-2 border-black bg-white px-4 py-2.5 font-mono text-xs font-bold uppercase text-black transition-colors hover:bg-zinc-200 active:translate-x-[1px] active:translate-y-[1px]"
+            className="flex-1 border-2 border-black bg-white px-4 py-2.5 font-mono text-xs font-bold uppercase text-black transition-colors hover:bg-zinc-200 cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+            className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer"
           >
             {isEditing ? "Save Changes" : "Create Link"}
           </button>
@@ -590,9 +586,9 @@ function InviteUserModal({
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+            className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED] cursor-pointer"
           >
-            <option value="admin">ADMIN (Manage Links & Content)</option>
+            <option value="admin">ADMIN (Manage Links, Content & Inquiries)</option>
             <option value="editor">EDITOR (View & Edit Links)</option>
           </select>
         </div>
@@ -601,14 +597,14 @@ function InviteUserModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 border-2 border-black bg-white px-4 py-2.5 font-mono text-xs font-bold uppercase text-black transition-colors hover:bg-zinc-200"
+            className="flex-1 border-2 border-black bg-white px-4 py-2.5 font-mono text-xs font-bold uppercase text-black transition-colors hover:bg-zinc-200 cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple disabled:opacity-50"
+            className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Sending Invite…" : "Send Invite Email →"}
           </button>
@@ -618,7 +614,7 @@ function InviteUserModal({
   );
 }
 
-// ── Password Reset / Update Modal (With Live Strength Ranking) ──
+// ── Password Reset / Update Modal ──
 function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -645,16 +641,26 @@ function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
       toast.success("Password updated successfully!", {
         description: "Your new password is now active.",
       });
+      // Dispatch password changed notification
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user?.email) {
+          fetch("/api/notify-auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "password_changed", email: user.email }),
+          }).catch(() => {});
+        }
+      });
       setLoading(false);
       onClose();
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-5 backdrop-blur-xs">
       <form
         onSubmit={handleUpdatePassword}
-        className="w-full max-w-sm space-y-4 border-[3px] border-black bg-white p-6 shadow-[8px_8px_0px_#000000]"
+        className="w-full max-w-sm space-y-4 border-[3px] border-black bg-white p-5 sm:p-6 shadow-[8px_8px_0px_#000000]"
       >
         <div className="border-b-2 border-black pb-3">
           <div className="mb-1 inline-block border border-black bg-accent-purple px-2 py-0.2 font-mono text-[9px] font-black text-white">
@@ -701,14 +707,14 @@ function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 border-2 border-black bg-white px-4 py-2.5 font-mono text-xs font-bold uppercase text-black transition-colors hover:bg-zinc-200"
+            className="flex-1 border-2 border-black bg-white px-4 py-2.5 font-mono text-xs font-bold uppercase text-black transition-colors hover:bg-zinc-200 cursor-pointer"
           >
             Later
           </button>
           <button
             type="submit"
             disabled={loading || newPassword.length < 8}
-            className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple disabled:opacity-50"
+            className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Updating…" : "Update Password →"}
           </button>
@@ -718,16 +724,197 @@ function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Main Admin Dashboard ──
+// ── Inquiry Detail Modal ──
+function InquiryModal({
+  inquiry,
+  onClose,
+  onStatusChange,
+  onDelete,
+}: {
+  inquiry: InquiryItem;
+  onClose: () => void;
+  onStatusChange: (id: string, status: InquiryItem["status"]) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-5 backdrop-blur-xs">
+      <div className="w-full max-w-lg space-y-4 border-[3px] border-black bg-white p-5 sm:p-6 shadow-[8px_8px_0px_#000000]">
+        <div className="border-b-2 border-black pb-3 flex items-center justify-between">
+          <div>
+            <div className="mb-1 inline-block border border-black bg-accent-purple px-2 py-0.2 font-mono text-[9px] font-black text-white">
+              // INQUIRY_DETAIL
+            </div>
+            <h2 className="text-xl font-black uppercase tracking-tight text-black">
+              {inquiry.category}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+          >
+            <HiOutlineXMark className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-2 font-mono text-xs">
+          <div className="flex justify-between border-b border-black/10 pb-1.5">
+            <span className="font-bold text-zinc-500">From:</span>
+            <span className="font-black text-black">{inquiry.name}</span>
+          </div>
+          <div className="flex justify-between border-b border-black/10 pb-1.5">
+            <span className="font-bold text-zinc-500">Email:</span>
+            <a href={`mailto:${inquiry.email}`} className="font-black text-accent-purple underline">
+              {inquiry.email}
+            </a>
+          </div>
+          <div className="flex justify-between border-b border-black/10 pb-1.5">
+            <span className="font-bold text-zinc-500">Received:</span>
+            <span className="text-zinc-700">{new Date(inquiry.created_at).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center pt-1">
+            <span className="font-bold text-zinc-500">Status:</span>
+            <span className={`border border-black px-2 py-0.5 text-[10px] font-black uppercase ${
+              inquiry.status === "unread" ? "bg-amber-300 text-black" : inquiry.status === "replied" ? "bg-emerald-300 text-black" : "bg-zinc-200 text-zinc-800"
+            }`}>
+              {inquiry.status}
+            </span>
+          </div>
+        </div>
+
+        <div className="border-2 border-black bg-zinc-50 p-3.5">
+          <span className="block font-mono text-[10px] font-bold text-zinc-500 mb-1">// MESSAGE_BODY</span>
+          <p className="font-sans text-sm text-black leading-relaxed whitespace-pre-wrap">
+            {inquiry.message}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2 pt-2 border-t-2 border-black">
+          <a
+            href={`mailto:${inquiry.email}?subject=Re:%20AWS%20SBG%20Inquiry%20-%20${encodeURIComponent(inquiry.category)}`}
+            onClick={() => onStatusChange(inquiry.id, "replied")}
+            className="flex-1 flex items-center justify-center gap-1.5 border-2 border-black bg-accent-purple px-3 py-2 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#000000] hover:bg-black text-center no-underline"
+          >
+            <span>Reply via Email</span>
+            <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5" />
+          </a>
+
+          {inquiry.status === "unread" ? (
+            <button
+              onClick={() => onStatusChange(inquiry.id, "read")}
+              className="border-2 border-black bg-white px-3 py-2 font-mono text-xs font-bold uppercase text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+            >
+              Mark Read
+            </button>
+          ) : (
+            <button
+              onClick={() => onStatusChange(inquiry.id, "unread")}
+              className="border-2 border-black bg-white px-3 py-2 font-mono text-xs font-bold uppercase text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+            >
+              Mark Unread
+            </button>
+          )}
+
+          <button
+            onClick={() => onDelete(inquiry.id)}
+            className="border-2 border-black bg-white px-3 py-2 font-mono text-xs font-bold text-red-600 shadow-[2px_2px_0px_#000000] hover:bg-red-50 cursor-pointer"
+          >
+            <HiOutlineTrash className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Mobile Preview Modal ──
+function LivePreviewModal({ links, onClose }: { links: LinkItem[]; onClose: () => void }) {
+  const activeLinks = links.filter((l) => l.is_active);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+      <div className="relative w-full max-w-[420px] max-h-[90vh] overflow-y-auto border-[3px] border-black bg-[#F4F4F5] p-4 shadow-[8px_8px_0px_#000000]">
+        <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-black">
+          <div className="flex items-center gap-2">
+            <span className="border border-black bg-black px-2 py-0.5 font-mono text-[9px] font-black text-white">
+              MOBILE_SIMULATOR
+            </span>
+            <span className="font-mono text-xs font-bold text-black">awssbg.online</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+          >
+            <HiOutlineXMark className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Mock Public View */}
+        <div className="text-center py-3">
+          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center border-2 border-black bg-white p-1 shadow-[2px_2px_0px_#000000]">
+            <Image src="/logo.png" alt="Logo" width={32} height={32} />
+          </div>
+          <h2 className="text-sm font-black uppercase text-black">Build, Certify &amp; Connect</h2>
+          <p className="text-[11px] text-zinc-600 font-medium mt-0.5">AWS Student Builder Group</p>
+        </div>
+
+        <div className="flex flex-col gap-2.5 my-3">
+          {activeLinks.map((link) => {
+            const Icon = getIconForPlatform(link.platform);
+            return (
+              <div
+                key={link.id}
+                className="flex items-center justify-between border-2 border-black bg-white p-2.5 shadow-[3px_3px_0px_#000000]"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 items-center justify-center border border-black bg-zinc-100">
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <span className="block font-black text-xs uppercase text-black">{link.title}</span>
+                    {link.description && (
+                      <span className="block font-mono text-[9px] text-zinc-500">{link.description}</span>
+                    )}
+                  </div>
+                </div>
+                <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5 text-zinc-400" />
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="pt-2 text-center border-t border-black/10 font-mono text-[9px] text-zinc-400">
+          &copy; AWS Student Builder Group
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Admin Dashboard Console ──
 function Dashboard() {
   const [links, setLinks] = useState<LinkItem[]>([]);
+  const [inquiries, setInquiries] = useState<InquiryItem[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Sidebar & View state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeView, setActiveView] = useState<"dashboard" | "analytics" | "links" | "inquiries" | "team">("dashboard");
+
+  // Modals state
   const [editing, setEditing] = useState<Partial<LinkItem> | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"links" | "team">("links");
+  const [showLivePreview, setShowLivePreview] = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState<InquiryItem | null>(null);
+
+  // Inquiries filter
+  const [inquiryCategoryFilter, setInquiryCategoryFilter] = useState("all");
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState("all");
+
+  // User auth state
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [sessionToken, setSessionToken] = useState<string>("");
@@ -743,7 +930,17 @@ function Dashboard() {
     } else if (data) {
       setLinks(data as LinkItem[]);
     }
-    setLoading(false);
+  }, []);
+
+  const fetchInquiries = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("inquiries")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      setInquiries(data as InquiryItem[]);
+    }
   }, []);
 
   const fetchUsers = useCallback(async (token: string) => {
@@ -779,10 +976,30 @@ function Dashboard() {
       }
     });
 
-    fetchLinks();
-  }, [fetchLinks, fetchUsers]);
+    Promise.all([fetchLinks(), fetchInquiries()]).then(() => {
+      setLoading(false);
+    });
+  }, [fetchLinks, fetchInquiries, fetchUsers]);
 
-  async function handleSave(data: Partial<LinkItem>) {
+  // Total link click traffic
+  const totalClicks = useMemo(() => {
+    return links.reduce((sum, link) => sum + (link.click_count || 0), 0);
+  }, [links]);
+
+  const unreadInquiriesCount = useMemo(() => {
+    return inquiries.filter((i) => i.status === "unread").length;
+  }, [inquiries]);
+
+  // Filtered inquiries
+  const filteredInquiries = useMemo(() => {
+    return inquiries.filter((inq) => {
+      const matchCat = inquiryCategoryFilter === "all" || inq.category === inquiryCategoryFilter;
+      const matchStatus = inquiryStatusFilter === "all" || inq.status === inquiryStatusFilter;
+      return matchCat && matchStatus;
+    });
+  }, [inquiries, inquiryCategoryFilter, inquiryStatusFilter]);
+
+  async function handleSaveLink(data: Partial<LinkItem>) {
     if (data.id) {
       const { id, ...rest } = data;
       const { error } = await supabase.from("links").update(rest).eq("id", id);
@@ -793,11 +1010,10 @@ function Dashboard() {
         fetchLinks();
       }
     } else {
-      const maxOrder =
-        links.length > 0 ? Math.max(...links.map((l) => l.sort_order)) : 0;
+      const maxOrder = links.length > 0 ? Math.max(...links.map((l) => l.sort_order)) : 0;
       const { error } = await supabase
         .from("links")
-        .insert({ ...data, sort_order: maxOrder + 1 });
+        .insert({ ...data, sort_order: maxOrder + 1, click_count: 0 });
 
       if (error) {
         toast.error("Failed to create link", { description: error.message });
@@ -807,9 +1023,10 @@ function Dashboard() {
       }
     }
     setEditing(null);
+    setShowEditor(false);
   }
 
-  async function handleDelete(id: string, title: string) {
+  async function handleDeleteLink(id: string, title: string) {
     if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
 
     const { error } = await supabase.from("links").delete().eq("id", id);
@@ -818,29 +1035,6 @@ function Dashboard() {
     } else {
       toast.success("Link deleted");
       fetchLinks();
-    }
-  }
-
-  async function handleDeleteUser(userId: string, userEmail: string) {
-    if (!confirm(`Are you sure you want to remove ${userEmail} from admin access?`)) return;
-
-    try {
-      const res = await fetch("/api/users", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({ userId }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to remove user");
-
-      toast.success("Admin user removed");
-      fetchUsers(sessionToken);
-    } catch (err) {
-      toast.error("Delete failed", { description: (err as Error).message });
     }
   }
 
@@ -880,6 +1074,54 @@ function Dashboard() {
     fetchLinks();
   }
 
+  async function handleInquiryStatusChange(id: string, status: InquiryItem["status"]) {
+    const { error } = await supabase.from("inquiries").update({ status }).eq("id", id);
+    if (error) {
+      toast.error("Failed to update inquiry status");
+    } else {
+      toast.success(`Inquiry marked as ${status}`);
+      fetchInquiries();
+      if (selectedInquiry && selectedInquiry.id === id) {
+        setSelectedInquiry({ ...selectedInquiry, status });
+      }
+    }
+  }
+
+  async function handleDeleteInquiry(id: string) {
+    if (!confirm("Are you sure you want to delete this inquiry?")) return;
+    const { error } = await supabase.from("inquiries").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete inquiry");
+    } else {
+      toast.success("Inquiry deleted");
+      setSelectedInquiry(null);
+      fetchInquiries();
+    }
+  }
+
+  async function handleDeleteUser(userId: string, userEmail: string) {
+    if (!confirm(`Are you sure you want to remove ${userEmail} from admin access?`)) return;
+
+    try {
+      const res = await fetch("/api/users", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove user");
+
+      toast.success("Admin user removed");
+      fetchUsers(sessionToken);
+    } catch (err) {
+      toast.error("Delete failed", { description: (err as Error).message });
+    }
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut();
     toast("Logged out");
@@ -891,283 +1133,813 @@ function Dashboard() {
       <div className="flex min-h-screen items-center justify-center bg-[#F4F4F5]">
         <div className="flex flex-col items-center gap-2 border-[3px] border-black bg-white p-6 shadow-[4px_4px_0px_#000000]">
           <div className="h-6 w-6 animate-spin border-2 border-black border-t-accent-purple" />
-          <p className="font-mono text-xs font-bold uppercase text-black">Loading dashboard…</p>
+          <p className="font-mono text-xs font-bold uppercase text-black">Loading AWS SBG Admin Console…</p>
         </div>
       </div>
     );
   }
 
+  const NAV_ITEMS = [
+    { id: "dashboard", label: "Dashboard", icon: HiOutlineSquares2X2 },
+    { id: "analytics", label: "Analytics", icon: HiOutlineChartBar },
+    { id: "links", label: `Links (${links.length})`, icon: HiOutlineLink },
+    { id: "inquiries", label: "Inquiries", badge: unreadInquiriesCount, icon: HiOutlineEnvelope },
+    { id: "team", label: "Settings & Team", icon: HiOutlineUserGroup },
+  ] as const;
+
   return (
-    <div className="brutal-grid-bg min-h-screen bg-[#F4F4F5] px-3.5 sm:px-5 py-6 sm:py-8">
-      <div className="mx-auto max-w-2xl">
-        {/* Header Console Box */}
-        <div className="mb-5 sm:mb-6 border-[3px] border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000000]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center border-2 border-black bg-white p-1.5 shadow-[2px_2px_0px_#000000]">
-                <Image
-                  src="/logo.png"
-                  alt="AWS SBG Logo"
-                  width={36}
-                  height={36}
-                  className="h-full w-full object-contain"
-                />
+    <div className="flex min-h-screen bg-[#F4F4F5]">
+      {/* ── Desktop Collapsible Left Sidebar ── */}
+      <aside
+        className={`hidden md:flex flex-col justify-between border-r-[3px] border-black bg-white transition-all duration-200 sticky top-0 h-screen z-30 ${
+          sidebarCollapsed ? "w-[72px]" : "w-[240px]"
+        }`}
+      >
+        {/* Top Header Stamp */}
+        <div>
+          <div className="flex items-center justify-between border-b-[3px] border-black p-3.5">
+            <div className={`flex items-center gap-2.5 overflow-hidden ${sidebarCollapsed ? "justify-center w-full" : ""}`}>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-black bg-white p-1 shadow-[2px_2px_0px_#000000]">
+                <Image src="/logo.png" alt="Logo" width={24} height={24} className="h-full w-full object-contain" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg sm:text-xl font-black uppercase tracking-tight text-black">
-                    awssbg Admin
-                  </h1>
-                  {isSuperAdmin && (
-                    <span className="border border-black bg-accent-purple px-1.5 sm:px-2 py-0.2 font-mono text-[9px] sm:text-[10px] font-black text-white shadow-[1px_1px_0px_#000000]">
-                      SUPERADMIN
-                    </span>
-                  )}
+              {!sidebarCollapsed && (
+                <div className="truncate">
+                  <span className="block font-mono text-[12px] font-black uppercase text-black">
+                    AWS SBG <span className="text-accent-purple">//</span> MGMT
+                  </span>
+                  <span className="block font-mono text-[9px] font-bold text-zinc-500 truncate">
+                    Console v2.0
+                  </span>
                 </div>
-                <p className="mt-0.5 font-mono text-[11px] sm:text-xs text-zinc-600 truncate max-w-[280px]">
-                  {currentUserEmail}
-                </p>
+              )}
+            </div>
+            {!sidebarCollapsed && (
+              <button
+                onClick={() => setSidebarCollapsed(true)}
+                className="flex h-7 w-7 items-center justify-center border-2 border-black bg-white hover:bg-zinc-100 shadow-[1px_1px_0px_#000000] cursor-pointer"
+                title="Collapse sidebar"
+              >
+                <HiOutlineChevronLeft className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Collapsed expansion button */}
+          {sidebarCollapsed && (
+            <div className="p-2 text-center border-b border-black/10">
+              <button
+                onClick={() => setSidebarCollapsed(false)}
+                className="w-full flex items-center justify-center py-1 border border-black bg-zinc-50 hover:bg-black hover:text-white transition-colors cursor-pointer"
+                title="Expand sidebar"
+              >
+                <HiOutlineChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Navigation Links */}
+          <nav className="p-3 space-y-1.5">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveView(item.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 border-2 font-mono text-xs font-black uppercase transition-all cursor-pointer ${
+                    isActive
+                      ? "border-black bg-black text-white shadow-[3px_3px_0px_#7C3AED]"
+                      : "border-transparent text-zinc-700 hover:border-black hover:bg-zinc-100"
+                  } ${sidebarCollapsed ? "justify-center px-0" : ""}`}
+                  title={item.label}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed && (
+                    <div className="flex-1 flex items-center justify-between text-left">
+                      <span>{item.label}</span>
+                      {"badge" in item && item.badge > 0 && (
+                        <span className="border border-black bg-amber-300 text-black px-1.5 py-0.2 font-mono text-[9px] font-black shadow-[1px_1px_0px_#000000]">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Bottom User Account Section */}
+        <div className="border-t-[3px] border-black p-3 space-y-2">
+          {!sidebarCollapsed ? (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-mono text-[10px] font-black uppercase text-black truncate max-w-[120px]">
+                  {currentUserEmail.split("@")[0]}
+                </span>
+                <span className="border border-black bg-accent-purple px-1.5 py-0.2 font-mono text-[8px] font-black text-white">
+                  {isSuperAdmin ? "SUPERADMIN" : "ADMIN"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowPasswordModal(true)}
+                  className="flex-1 flex items-center justify-center gap-1 border-2 border-black bg-white py-1 font-mono text-[10px] font-bold text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+                  title="Update Password"
+                >
+                  <HiOutlineKey className="h-3 w-3" />
+                  <span>Key</span>
+                </button>
+                <a
+                  href="https://awssbg.online"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center border-2 border-black bg-white p-1 shadow-[1px_1px_0px_#000000] hover:bg-zinc-100"
+                  title="Open Public Site"
+                >
+                  <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5 text-black" />
+                </a>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center justify-center border-2 border-black bg-white p-1 text-red-600 shadow-[1px_1px_0px_#000000] hover:bg-red-50 cursor-pointer"
+                  title="Sign Out"
+                >
+                  <HiOutlineArrowRightOnRectangle className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2">
+          ) : (
+            <div className="flex flex-col items-center gap-2">
               <button
                 onClick={() => setShowPasswordModal(true)}
+                className="flex h-8 w-8 items-center justify-center border border-black bg-white hover:bg-zinc-100 cursor-pointer"
                 title="Update Password"
-                className="border-2 border-black bg-white px-2.5 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100"
               >
                 <HiOutlineKey className="h-4 w-4" />
               </button>
-              <a
-                href="https://awssbg.online"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-center border-2 border-black bg-white px-3 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100"
-              >
-                Public ↗
-              </a>
               <button
                 onClick={handleLogout}
-                className="border-2 border-black bg-white px-3 py-1.5 font-mono text-xs font-bold text-zinc-600 hover:bg-red-50 hover:text-red-600"
+                className="flex h-8 w-8 items-center justify-center border border-black bg-white text-red-600 hover:bg-red-50 cursor-pointer"
+                title="Sign Out"
               >
-                Logout
+                <HiOutlineArrowRightOnRectangle className="h-4 w-4" />
               </button>
             </div>
-          </div>
+          )}
+        </div>
+      </aside>
 
-          {/* Navigation Tabs */}
-          <div className="mt-4 flex border-t-2 border-black/10 pt-3 gap-2">
-            <button
-              onClick={() => setActiveTab("links")}
-              className={`px-3 py-1 font-mono text-xs font-black uppercase transition-all ${
-                activeTab === "links"
-                  ? "border-2 border-black bg-black text-white shadow-[2px_2px_0px_#7C3AED]"
-                  : "border-2 border-transparent text-zinc-600 hover:text-black"
-              }`}
-            >
-              Links ({links.length})
-            </button>
-            {isSuperAdmin && (
-              <button
-                onClick={() => setActiveTab("team")}
-                className={`flex items-center gap-1.5 px-3 py-1 font-mono text-xs font-black uppercase transition-all ${
-                  activeTab === "team"
-                    ? "border-2 border-black bg-black text-white shadow-[2px_2px_0px_#7C3AED]"
-                    : "border-2 border-transparent text-zinc-600 hover:text-black"
-                }`}
-              >
-                <HiOutlineUserGroup className="h-3.5 w-3.5" />
-                <span>Team &amp; Users ({users.length})</span>
-              </button>
-            )}
+      {/* ── Main Content Area ── */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile Top Header */}
+        <div className="md:hidden flex items-center justify-between border-b-[3px] border-black bg-white px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <Image src="/logo.png" alt="Logo" width={28} height={28} />
+            <span className="font-mono text-xs font-black uppercase text-black">
+              AWS SBG MGMT
+            </span>
           </div>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="flex h-9 w-9 items-center justify-center border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000000] cursor-pointer"
+          >
+            <HiOutlineBars3 className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* TAB 1: Links Management */}
-        {activeTab === "links" && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center px-1">
-              <span className="font-mono text-xs font-bold text-zinc-600">
-                {links.filter((l) => l.is_active).length} of {links.length} published on live site
-              </span>
+        {/* Mobile Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-b-[3px] border-black bg-white p-4 space-y-2 shadow-[0px_6px_0px_#000000]">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveView(item.id);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 border-2 font-mono text-xs font-black uppercase ${
+                    isActive ? "border-black bg-black text-white" : "border-black bg-white text-black"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </div>
+                  {"badge" in item && item.badge > 0 && (
+                    <span className="bg-amber-300 text-black px-1.5 py-0.2 text-[9px] font-black">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            <div className="pt-2 border-t border-black/10 flex gap-2">
               <button
                 onClick={() => {
-                  setEditing(null);
-                  setShowEditor(true);
+                  setShowPasswordModal(true);
+                  setMobileMenuOpen(false);
                 }}
-                className="inline-flex items-center justify-center gap-1.5 border-2 border-black bg-black px-3.5 py-1.5 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#7C3AED] hover:bg-accent-purple"
+                className="flex-1 border-2 border-black bg-white py-1.5 font-mono text-xs font-bold text-black"
               >
-                <HiPlus className="h-3.5 w-3.5" />
-                <span>Add Link Card</span>
+                Password
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 border-2 border-black bg-red-50 py-1.5 font-mono text-xs font-bold text-red-600"
+              >
+                Sign Out
               </button>
             </div>
-
-            <div className="space-y-3">
-              {links.map((link, index) => {
-                const Icon = getIconForPlatform(link.platform);
-                return (
-                  <div
-                    key={link.id}
-                    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-[3px] border-black bg-white p-3.5 sm:p-4 shadow-[4px_4px_0px_#000000] transition-all ${
-                      !link.is_active ? "opacity-60 bg-zinc-50" : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-black bg-white p-2 shadow-[2px_2px_0px_#000000]">
-                        <Icon className="h-5 w-5 text-black" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-mono text-sm font-black text-black truncate">
-                            {link.title}
-                          </h3>
-                          {!link.is_active && (
-                            <span className="border border-black bg-zinc-200 px-1 py-0.2 font-mono text-[9px] font-black uppercase text-zinc-700">
-                              DRAFT
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-mono text-[11px] text-zinc-500 truncate max-w-[260px] sm:max-w-[340px]">
-                          {link.url}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-1.5 pt-2 sm:pt-0 border-t border-black/10 sm:border-0">
-                      <button
-                        onClick={() => handleMoveUp(index)}
-                        disabled={index === 0}
-                        className="flex h-8 w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 disabled:opacity-30"
-                        title="Move Up"
-                      >
-                        <HiOutlineArrowUp className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleMoveDown(index)}
-                        disabled={index === links.length - 1}
-                        className="flex h-8 w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 disabled:opacity-30"
-                        title="Move Down"
-                      >
-                        <HiOutlineArrowDown className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleToggleActive(link)}
-                        className={`border-2 border-black px-2 py-1 font-mono text-[10px] font-black uppercase shadow-[1px_1px_0px_#000000] transition-colors ${
-                          link.is_active
-                            ? "bg-emerald-300 text-black hover:bg-emerald-400"
-                            : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"
-                        }`}
-                        title={link.is_active ? "Click to hide" : "Click to show"}
-                      >
-                        {link.is_active ? "LIVE" : "DRAFT"}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditing(link);
-                          setShowEditor(true);
-                        }}
-                        className="flex h-8 w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100"
-                        title="Edit"
-                      >
-                        <HiOutlinePencilSquare className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(link.id, link.title)}
-                        className="flex h-8 w-8 items-center justify-center border-2 border-black bg-white text-red-600 shadow-[1px_1px_0px_#000000] hover:bg-red-50"
-                        title="Delete"
-                      >
-                        <HiOutlineTrash className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {links.length === 0 && (
-              <div className="border-[3px] border-dashed border-black bg-white py-16 text-center shadow-[4px_4px_0px_#000000]">
-                <p className="font-mono text-xs font-bold uppercase text-zinc-600">
-                  No links currently published. Click &quot;Add Link Card&quot; above to create one.
-                </p>
-              </div>
-            )}
           </div>
         )}
 
-        {/* TAB 2: Superadmin Team & Users */}
-        {activeTab === "team" && isSuperAdmin && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center px-1">
-              <span className="font-mono text-xs font-bold text-zinc-600">
-                Authorized Team Members ({users.length})
-              </span>
-              <button
-                onClick={() => setShowInviteModal(true)}
-                className="inline-flex items-center justify-center gap-1.5 border-2 border-black bg-accent-purple px-3.5 py-1.5 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#000000] hover:bg-black"
-              >
-                <HiOutlineUserPlus className="h-4 w-4" />
-                <span>Invite User</span>
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-[3px] border-black bg-white p-3.5 sm:p-4 shadow-[4px_4px_0px_#000000]"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-black bg-black text-white font-mono font-black text-sm shadow-[2px_2px_0px_#7C3AED]">
-                      {user.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-mono text-sm font-black text-black truncate">
-                          {user.name}
-                        </h3>
-                        <span
-                          className={`border border-black px-1.5 py-0.2 font-mono text-[9px] font-black uppercase ${
-                            user.is_super_admin
-                              ? "bg-accent-purple text-white shadow-[1px_1px_0px_#000000]"
-                              : "bg-zinc-100 text-black"
-                          }`}
-                        >
-                          {user.is_super_admin ? "SUPERADMIN" : user.role.toUpperCase()}
-                        </span>
-                      </div>
-                      <p className="font-mono text-[11px] text-zinc-500 truncate">
-                        {user.email}
-                      </p>
-                    </div>
+        {/* Dynamic View Container */}
+        <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-5xl w-full mx-auto">
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW 1: DASHBOARD */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "dashboard" && (
+            <div className="space-y-6">
+              {/* Header Stamp */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-[3px] border-black bg-white p-5 shadow-[4px_4px_0px_#000000]">
+                <div>
+                  <div className="mb-1 inline-block border border-black bg-black px-2 py-0.2 font-mono text-[9px] font-black text-white">
+                    // SYSTEM_OVERVIEW
                   </div>
+                  <h1 className="text-2xl font-black uppercase tracking-tight text-black">
+                    AWS SBG Dashboard
+                  </h1>
+                  <p className="font-mono text-xs text-zinc-600 mt-0.5">
+                    Live operational metrics for the student community hub.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditing(null);
+                      setShowEditor(true);
+                    }}
+                    className="flex items-center gap-1.5 border-2 border-black bg-accent-purple px-3.5 py-2 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#000000] hover:bg-black transition-colors cursor-pointer"
+                  >
+                    <HiPlus className="h-4 w-4" />
+                    <span>New Link</span>
+                  </button>
+                  <button
+                    onClick={() => setShowLivePreview(true)}
+                    className="flex items-center gap-1.5 border-2 border-black bg-white px-3 py-2 font-mono text-xs font-black uppercase text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100 transition-colors cursor-pointer"
+                  >
+                    <HiOutlineEye className="h-4 w-4" />
+                    <span>Preview</span>
+                  </button>
+                </div>
+              </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 sm:pt-0 border-t border-black/10 sm:border-0">
-                    {!user.is_super_admin && user.email !== "lethabomabilo33@gmail.com" ? (
-                      <button
-                        onClick={() => handleDeleteUser(user.id, user.email)}
-                        className="inline-flex items-center gap-1 border-2 border-black bg-white px-2.5 py-1 font-mono text-[11px] font-bold text-red-600 shadow-[1px_1px_0px_#000000] hover:bg-red-50"
-                      >
-                        <HiOutlineTrash className="h-3.5 w-3.5" />
-                        <span>Remove</span>
-                      </button>
-                    ) : (
-                      <span className="font-mono text-[10px] font-bold text-zinc-400">
-                        PRIMARY OWNER
+              {/* 4 Metric Stamp Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                <div className="border-[3px] border-black bg-white p-4 shadow-[4px_4px_0px_#000000]">
+                  <span className="font-mono text-[10px] font-black uppercase tracking-wider text-zinc-500">
+                    Active Links
+                  </span>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-black">
+                      {links.filter((l) => l.is_active).length}
+                    </span>
+                    <span className="font-mono text-xs text-zinc-500">/ {links.length} total</span>
+                  </div>
+                </div>
+
+                <div className="border-[3px] border-black bg-white p-4 shadow-[4px_4px_0px_#000000]">
+                  <span className="font-mono text-[10px] font-black uppercase tracking-wider text-zinc-500">
+                    Unread Inquiries
+                  </span>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span className={`text-3xl font-black ${unreadInquiriesCount > 0 ? "text-accent-purple" : "text-black"}`}>
+                      {unreadInquiriesCount}
+                    </span>
+                    {unreadInquiriesCount > 0 && (
+                      <span className="border border-black bg-amber-300 px-1 py-0.2 font-mono text-[9px] font-black text-black">
+                        ACTION NEEDED
                       </span>
                     )}
                   </div>
                 </div>
-              ))}
+
+                <div className="border-[3px] border-black bg-white p-4 shadow-[4px_4px_0px_#000000]">
+                  <span className="font-mono text-[10px] font-black uppercase tracking-wider text-zinc-500">
+                    Total Click Volume
+                  </span>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-accent-blue">
+                      {totalClicks}
+                    </span>
+                    <span className="font-mono text-xs text-zinc-500">clicks</span>
+                  </div>
+                </div>
+
+                <div className="border-[3px] border-black bg-white p-4 shadow-[4px_4px_0px_#000000]">
+                  <span className="font-mono text-[10px] font-black uppercase tracking-wider text-zinc-500">
+                    Admin Team
+                  </span>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-black">
+                      {users.length > 0 ? users.length : 1}
+                    </span>
+                    <span className="font-mono text-xs text-zinc-500">leaders</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Inquiries Preview + Top Links Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Recent Inquiries Card */}
+                <div className="border-[3px] border-black bg-white p-5 shadow-[4px_4px_0px_#000000]">
+                  <div className="flex items-center justify-between pb-3 border-b-2 border-black mb-3">
+                    <h2 className="font-mono text-xs font-black uppercase tracking-wider text-black flex items-center gap-1.5">
+                      <HiOutlineEnvelope className="h-4 w-4 text-accent-purple" />
+                      <span>Recent Contact Inquiries</span>
+                    </h2>
+                    <button
+                      onClick={() => setActiveView("inquiries")}
+                      className="font-mono text-[11px] font-black uppercase text-accent-purple hover:underline cursor-pointer"
+                    >
+                      View All &rarr;
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {inquiries.slice(0, 3).map((inq) => (
+                      <div
+                        key={inq.id}
+                        onClick={() => setSelectedInquiry(inq)}
+                        className="border-2 border-black bg-zinc-50 p-3 hover:bg-yellow-50 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-mono text-xs font-black text-black">{inq.name}</span>
+                          <span className={`border border-black px-1.5 py-0.2 font-mono text-[8px] font-black uppercase ${
+                            inq.status === "unread" ? "bg-amber-300 text-black" : "bg-zinc-200 text-zinc-700"
+                          }`}>
+                            {inq.status}
+                          </span>
+                        </div>
+                        <p className="font-mono text-[11px] font-bold text-accent-purple">{inq.category}</p>
+                        <p className="text-xs text-zinc-600 line-clamp-1 mt-0.5">{inq.message}</p>
+                      </div>
+                    ))}
+
+                    {inquiries.length === 0 && (
+                      <div className="py-8 text-center font-mono text-xs text-zinc-500">
+                        No contact submissions recorded yet.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Top Performing Links Card */}
+                <div className="border-[3px] border-black bg-white p-5 shadow-[4px_4px_0px_#000000]">
+                  <div className="flex items-center justify-between pb-3 border-b-2 border-black mb-3">
+                    <h2 className="font-mono text-xs font-black uppercase tracking-wider text-black flex items-center gap-1.5">
+                      <HiOutlineChartBar className="h-4 w-4 text-accent-blue" />
+                      <span>Top Performing Links</span>
+                    </h2>
+                    <button
+                      onClick={() => setActiveView("analytics")}
+                      className="font-mono text-[11px] font-black uppercase text-accent-blue hover:underline cursor-pointer"
+                    >
+                      Analytics &rarr;
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {links
+                      .slice()
+                      .sort((a, b) => (b.click_count || 0) - (a.click_count || 0))
+                      .slice(0, 3)
+                      .map((link) => {
+                        const Icon = getIconForPlatform(link.platform);
+                        return (
+                          <div
+                            key={link.id}
+                            className="flex items-center justify-between border-2 border-black bg-zinc-50 p-3"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="flex h-7 w-7 items-center justify-center border border-black bg-white">
+                                <Icon className="h-3.5 w-3.5 text-black" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="block font-mono text-xs font-black text-black truncate">
+                                  {link.title}
+                                </span>
+                                <span className="block font-mono text-[10px] text-zinc-500 truncate">
+                                  {link.url}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="font-mono text-xs font-black text-black">
+                                {link.click_count || 0}
+                              </span>
+                              <span className="block font-mono text-[8px] uppercase text-zinc-500">clicks</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                    {links.length === 0 && (
+                      <div className="py-8 text-center font-mono text-xs text-zinc-500">
+                        No active links found.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW 2: ANALYTICS */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "analytics" && (
+            <div className="space-y-6">
+              <div className="border-[3px] border-black bg-white p-5 shadow-[4px_4px_0px_#000000]">
+                <div className="mb-1 inline-block border border-black bg-accent-blue px-2 py-0.2 font-mono text-[9px] font-black text-white">
+                  // TELEMETRY_AND_CLICKS
+                </div>
+                <h1 className="text-2xl font-black uppercase tracking-tight text-black">
+                  Link Analytics &amp; Conversion
+                </h1>
+                <p className="font-mono text-xs text-zinc-600 mt-0.5">
+                  Click-through rates and channel distribution across the AWS SBG platform.
+                </p>
+              </div>
+
+              {/* Performance Table */}
+              <div className="border-[3px] border-black bg-white p-5 shadow-[4px_4px_0px_#000000]">
+                <h2 className="font-mono text-xs font-black uppercase tracking-wider text-black mb-4">
+                  Destination Performance Breakdown
+                </h2>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left font-mono text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b-2 border-black bg-zinc-100">
+                        <th className="p-3 font-black text-black">LINK TITLE</th>
+                        <th className="p-3 font-black text-black">PLATFORM</th>
+                        <th className="p-3 font-black text-black text-right">TOTAL CLICKS</th>
+                        <th className="p-3 font-black text-black text-right">SHARE</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y border-b border-black">
+                      {links
+                        .slice()
+                        .sort((a, b) => (b.click_count || 0) - (a.click_count || 0))
+                        .map((link) => {
+                          const Icon = getIconForPlatform(link.platform);
+                          const clicks = link.click_count || 0;
+                          const pct = totalClicks > 0 ? ((clicks / totalClicks) * 100).toFixed(1) : "0";
+                          return (
+                            <tr key={link.id} className="hover:bg-zinc-50">
+                              <td className="p-3 font-bold text-black flex items-center gap-2">
+                                <Icon className="h-4 w-4" />
+                                <span>{link.title}</span>
+                              </td>
+                              <td className="p-3 uppercase text-zinc-600">{link.platform}</td>
+                              <td className="p-3 text-right font-black text-black">{clicks}</td>
+                              <td className="p-3 text-right font-bold text-accent-purple">{pct}%</td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW 3: LINKS MANAGEMENT */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "links" && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-[3px] border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000000]">
+                <div>
+                  <h1 className="text-xl font-black uppercase tracking-tight text-black">
+                    Link Card Manager
+                  </h1>
+                  <span className="font-mono text-xs font-bold text-zinc-600">
+                    {links.filter((l) => l.is_active).length} of {links.length} links published on live site
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditing(null);
+                      setShowEditor(true);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 border-2 border-black bg-black px-3.5 py-2 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#7C3AED] hover:bg-accent-purple cursor-pointer"
+                  >
+                    <HiPlus className="h-3.5 w-3.5" />
+                    <span>Add Link Card</span>
+                  </button>
+                  <button
+                    onClick={() => setShowLivePreview(true)}
+                    className="flex items-center gap-1.5 border-2 border-black bg-white px-3 py-2 font-mono text-xs font-black uppercase text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+                  >
+                    <HiOutlineEye className="h-4 w-4" />
+                    <span>Simulator</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {links.map((link, index) => {
+                  const Icon = getIconForPlatform(link.platform);
+                  return (
+                    <div
+                      key={link.id}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-[3px] border-black bg-white p-3.5 sm:p-4 shadow-[4px_4px_0px_#000000] transition-all ${
+                        !link.is_active ? "opacity-60 bg-zinc-50" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-black bg-white p-2 shadow-[2px_2px_0px_#000000]">
+                          <Icon className="h-5 w-5 text-black" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-mono text-sm font-black text-black truncate">
+                              {link.title}
+                            </h3>
+                            {!link.is_active && (
+                              <span className="border border-black bg-zinc-200 px-1 py-0.2 font-mono text-[9px] font-black uppercase text-zinc-700">
+                                DRAFT
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-mono text-[11px] text-zinc-500 truncate max-w-[260px] sm:max-w-[340px]">
+                            {link.url}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-1.5 pt-2 sm:pt-0 border-t border-black/10 sm:border-0">
+                        <button
+                          onClick={() => handleMoveUp(index)}
+                          disabled={index === 0}
+                          className="flex h-8 w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 disabled:opacity-30 cursor-pointer"
+                          title="Move Up"
+                        >
+                          <HiOutlineArrowUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleMoveDown(index)}
+                          disabled={index === links.length - 1}
+                          className="flex h-8 w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 disabled:opacity-30 cursor-pointer"
+                          title="Move Down"
+                        >
+                          <HiOutlineArrowDown className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleActive(link)}
+                          className={`border-2 border-black px-2 py-1 font-mono text-[10px] font-black uppercase shadow-[1px_1px_0px_#000000] transition-colors cursor-pointer ${
+                            link.is_active
+                              ? "bg-emerald-300 text-black hover:bg-emerald-400"
+                              : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"
+                          }`}
+                          title={link.is_active ? "Click to hide" : "Click to show"}
+                        >
+                          {link.is_active ? "LIVE" : "DRAFT"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditing(link);
+                            setShowEditor(true);
+                          }}
+                          className="flex h-8 w-8 items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+                          title="Edit"
+                        >
+                          <HiOutlinePencilSquare className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteLink(link.id, link.title)}
+                          className="flex h-8 w-8 items-center justify-center border-2 border-black bg-white text-red-600 shadow-[1px_1px_0px_#000000] hover:bg-red-50 cursor-pointer"
+                          title="Delete"
+                        >
+                          <HiOutlineTrash className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {links.length === 0 && (
+                <div className="border-[3px] border-dashed border-black bg-white py-16 text-center shadow-[4px_4px_0px_#000000]">
+                  <p className="font-mono text-xs font-bold uppercase text-zinc-600">
+                    No links currently published. Click &quot;Add Link Card&quot; above to create one.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW 4: INQUIRIES (CONTACT FORM RESPONSES) */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "inquiries" && (
+            <div className="space-y-4">
+              <div className="border-[3px] border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000000]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="mb-1 inline-block border border-black bg-accent-purple px-2 py-0.2 font-mono text-[9px] font-black text-white">
+                      // CONTACT_SUBMISSIONS
+                    </div>
+                    <h1 className="text-xl font-black uppercase tracking-tight text-black">
+                      Inquiries &amp; Form Responses
+                    </h1>
+                    <p className="font-mono text-xs text-zinc-600 mt-0.5">
+                      Submissions from awssbg.online/contact sent to lethabomabilo33@gmail.com.
+                    </p>
+                  </div>
+                  <button
+                    onClick={fetchInquiries}
+                    className="border-2 border-black bg-white px-3 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+                  >
+                    Refresh List
+                  </button>
+                </div>
+
+                {/* Filters */}
+                <div className="mt-4 pt-3 border-t-2 border-black/10 flex flex-wrap gap-2">
+                  <select
+                    value={inquiryStatusFilter}
+                    onChange={(e) => setInquiryStatusFilter(e.target.value)}
+                    className="border-2 border-black bg-white px-2.5 py-1 font-mono text-xs font-bold text-black cursor-pointer"
+                  >
+                    <option value="all">ALL STATUSES</option>
+                    <option value="unread">UNREAD ONLY</option>
+                    <option value="read">READ</option>
+                    <option value="replied">REPLIED</option>
+                  </select>
+
+                  <select
+                    value={inquiryCategoryFilter}
+                    onChange={(e) => setInquiryCategoryFilter(e.target.value)}
+                    className="border-2 border-black bg-white px-2.5 py-1 font-mono text-xs font-bold text-black cursor-pointer"
+                  >
+                    <option value="all">ALL CATEGORIES</option>
+                    <option value="General Inquiry">General Inquiry</option>
+                    <option value="Join Study Jam / Bootcamp">Join Study Jam</option>
+                    <option value="Host Workshop / Speaker Request">Speaker Request</option>
+                    <option value="University Tech Club Partnership">Club Partnership</option>
+                    <option value="Certification Voucher Inquiry">Certification Vouchers</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Inquiries List */}
+              <div className="space-y-3">
+                {filteredInquiries.map((inq) => (
+                  <div
+                    key={inq.id}
+                    onClick={() => setSelectedInquiry(inq)}
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-[3px] border-black bg-white p-4 shadow-[4px_4px_0px_#000000] hover:bg-yellow-50 transition-all cursor-pointer ${
+                      inq.status === "unread" ? "border-l-[8px] border-l-amber-400" : ""
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-sm font-black text-black">
+                          {inq.name}
+                        </span>
+                        <span className="font-mono text-xs text-zinc-500">
+                          &lt;{inq.email}&gt;
+                        </span>
+                        <span className={`border border-black px-1.5 py-0.2 font-mono text-[8px] font-black uppercase ${
+                          inq.status === "unread" ? "bg-amber-300 text-black" : inq.status === "replied" ? "bg-emerald-300 text-black" : "bg-zinc-200 text-zinc-700"
+                        }`}>
+                          {inq.status}
+                        </span>
+                      </div>
+                      <span className="block font-mono text-xs font-bold text-accent-purple mb-0.5">
+                        {inq.category}
+                      </span>
+                      <p className="text-xs text-zinc-700 line-clamp-1">
+                        {inq.message}
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 text-right font-mono text-[10px] text-zinc-500">
+                      {new Date(inq.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+
+                {filteredInquiries.length === 0 && (
+                  <div className="border-[3px] border-dashed border-black bg-white py-16 text-center shadow-[4px_4px_0px_#000000]">
+                    <p className="font-mono text-xs font-bold uppercase text-zinc-600">
+                      No matching inquiries found in database.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW 5: SETTINGS & TEAM */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "team" && (
+            <div className="space-y-6">
+              <div className="border-[3px] border-black bg-white p-5 shadow-[4px_4px_0px_#000000]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="mb-1 inline-block border border-black bg-black px-2 py-0.2 font-mono text-[9px] font-black text-white">
+                      // ACCESS_CONTROL
+                    </div>
+                    <h1 className="text-2xl font-black uppercase tracking-tight text-black">
+                      Settings &amp; Team Leadership
+                    </h1>
+                    <p className="font-mono text-xs text-zinc-600 mt-0.5">
+                      Role-based access management for AWS SBG student leaders.
+                    </p>
+                  </div>
+                  {isSuperAdmin && (
+                    <button
+                      onClick={() => setShowInviteModal(true)}
+                      className="inline-flex items-center justify-center gap-1.5 border-2 border-black bg-accent-purple px-3.5 py-2 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#000000] hover:bg-black cursor-pointer"
+                    >
+                      <HiOutlineUserPlus className="h-4 w-4" />
+                      <span>Invite Admin</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Team list */}
+              <div className="space-y-3">
+                {users.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-[3px] border-black bg-white p-3.5 sm:p-4 shadow-[4px_4px_0px_#000000]"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-black bg-black text-white font-mono font-black text-sm shadow-[2px_2px_0px_#7C3AED]">
+                        {user.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-mono text-sm font-black text-black truncate">
+                            {user.name}
+                          </h3>
+                          <span
+                            className={`border border-black px-1.5 py-0.2 font-mono text-[9px] font-black uppercase ${
+                              user.is_super_admin
+                                ? "bg-accent-purple text-white shadow-[1px_1px_0px_#000000]"
+                                : "bg-zinc-100 text-black"
+                            }`}
+                          >
+                            {user.is_super_admin ? "SUPERADMIN" : user.role.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="font-mono text-[11px] text-zinc-500 truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 sm:pt-0 border-t border-black/10 sm:border-0">
+                      {!user.is_super_admin && user.email !== "lethabomabilo33@gmail.com" ? (
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.email)}
+                          className="inline-flex items-center gap-1 border-2 border-black bg-white px-2.5 py-1 font-mono text-[11px] font-bold text-red-600 shadow-[1px_1px_0px_#000000] hover:bg-red-50 cursor-pointer"
+                        >
+                          <HiOutlineTrash className="h-3.5 w-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      ) : (
+                        <span className="font-mono text-[10px] font-bold text-zinc-400">
+                          PRIMARY OWNER
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </main>
       </div>
 
-      {/* Modals */}
+      {/* ── Modals ── */}
       {showEditor && (
         <LinkEditor
           link={editing}
-          onSave={handleSave}
+          onSave={handleSaveLink}
           onCancel={() => {
             setShowEditor(false);
             setEditing(null);
@@ -1185,6 +1957,19 @@ function Dashboard() {
 
       {showPasswordModal && (
         <PasswordUpdateModal onClose={() => setShowPasswordModal(false)} />
+      )}
+
+      {showLivePreview && (
+        <LivePreviewModal links={links} onClose={() => setShowLivePreview(false)} />
+      )}
+
+      {selectedInquiry && (
+        <InquiryModal
+          inquiry={selectedInquiry}
+          onClose={() => setSelectedInquiry(null)}
+          onStatusChange={handleInquiryStatusChange}
+          onDelete={handleDeleteInquiry}
+        />
       )}
     </div>
   );

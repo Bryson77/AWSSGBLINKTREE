@@ -47,6 +47,7 @@ export default function LinkList() {
           links.map((link) => (
             <LinkButton
               key={link.id}
+              id={link.id}
               title={link.title}
               url={link.url}
               platform={link.platform}
