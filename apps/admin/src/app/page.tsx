@@ -65,6 +65,43 @@ interface AdminUser {
   last_sign_in_at: string | null;
 }
 
+// ── User-Friendly Error Sanitizer ──
+function formatUserError(err: unknown, fallback: string): string {
+  if (!err) return fallback;
+  const msg = typeof err === "string" ? err : (err as Error).message || fallback;
+  const lower = msg.toLowerCase();
+
+  if (lower.includes("service_role") || lower.includes("service role") || lower.includes("supabase_service")) {
+    return "Server configuration is finalizing. Please try again in a moment.";
+  }
+  if (lower.includes("invalid login credentials") || lower.includes("invalid_grant")) {
+    return "Incorrect email or password. Please verify your credentials.";
+  }
+  if (lower.includes("email not confirmed")) {
+    return "Your email has not been confirmed yet. Please check your inbox.";
+  }
+  if (lower.includes("already been registered") || lower.includes("already exists")) {
+    return "This user is already part of the team. You can send them a password reset link instead.";
+  }
+  if (lower.includes("rate limit") || lower.includes("over_email_send_rate_limit") || lower.includes("too many requests")) {
+    return "Request limit reached. Please wait a few minutes before trying again.";
+  }
+  if (lower.includes("jwt") || lower.includes("unauthorized") || lower.includes("session")) {
+    return "Your session has expired. Please sign out and sign back in.";
+  }
+  if (lower.includes("forbidden") || lower.includes("superadmin")) {
+    return "Access restricted: Superadmin builder privileges required.";
+  }
+  if (lower.includes("failed to fetch") || lower.includes("network error")) {
+    return "Network connection issue. Please check your connection.";
+  }
+  if (lower.includes("password should be at least")) {
+    return "Password is too short. It must contain at least 8 characters.";
+  }
+
+  return msg;
+}
+
 // ── Live Password Strength Meter ──
 function PasswordStrengthMeter({ password }: { password: string }) {
   const analysis = useMemo(() => {
@@ -200,7 +237,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
         });
       }
     } catch (err) {
-      toast.error("Authentication failed", { description: (err as Error).message });
+      toast.error("Authentication failed", { description: formatUserError(err, "Please check your login details and try again.") });
     } finally {
       setLoading(false);
     }
@@ -523,12 +560,19 @@ function InviteUserModal({
       }
 
       toast.success("User invited successfully!", {
-        description: `Invitation dispatched to ${email}. They can now set their password.`,
+        description: `Invitation email sent to ${email}.`,
+        action: data.inviteLink ? {
+          label: "Copy Link",
+          onClick: () => {
+            navigator.clipboard.writeText(data.inviteLink);
+            toast.success("Invite link copied to clipboard!");
+          }
+        } : undefined,
       });
       onUserInvited();
       onClose();
     } catch (err) {
-      toast.error("Invitation failed", { description: (err as Error).message });
+      toast.error("Invitation failed", { description: formatUserError(err, "Unable to dispatch invitation at this time.") });
     } finally {
       setLoading(false);
     }
@@ -635,7 +679,7 @@ function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
 
     if (error) {
-      toast.error("Password update failed", { description: error.message });
+      toast.error("Password update failed", { description: formatUserError(error, "Unable to update password. Please try again.") });
       setLoading(false);
     } else {
       toast.success("Password updated successfully!", {
@@ -926,7 +970,7 @@ function Dashboard() {
       .order("sort_order", { ascending: true });
 
     if (error) {
-      toast.error("Failed to load links", { description: error.message });
+      toast.error("Failed to load links", { description: formatUserError(error, "Please refresh the page to try again.") });
     } else if (data) {
       setLinks(data as LinkItem[]);
     }
@@ -966,19 +1010,44 @@ function Dashboard() {
 
         const isSuper =
           (session.user as unknown as { is_super_admin?: boolean }).is_super_admin === true ||
-          email === "lethabomabilo33@gmail.com" ||
-          session.user.app_metadata?.role === "superadmin";
-
+          email === "lethabomabilo33@gmail.com";
         setIsSuperAdmin(isSuper);
+
+        fetchLinks();
+        fetchInquiries();
         if (isSuper) {
           fetchUsers(session.access_token);
         }
       }
-    });
-
-    Promise.all([fetchLinks(), fetchInquiries()]).then(() => {
       setLoading(false);
     });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        const email = session.user.email || "";
+        setCurrentUserEmail(email);
+        setSessionToken(session.access_token);
+
+        const isSuper =
+          (session.user as unknown as { is_super_admin?: boolean }).is_super_admin === true ||
+          email === "lethabomabilo33@gmail.com";
+        setIsSuperAdmin(isSuper);
+
+        fetchLinks();
+        fetchInquiries();
+        if (isSuper) {
+          fetchUsers(session.access_token);
+        }
+      } else {
+        setCurrentUserEmail("");
+        setSessionToken("");
+        setIsSuperAdmin(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [fetchLinks, fetchInquiries, fetchUsers]);
 
   // Total link click traffic
@@ -986,6 +1055,7 @@ function Dashboard() {
     return links.reduce((sum, link) => sum + (link.click_count || 0), 0);
   }, [links]);
 
+  // Unread count
   const unreadInquiriesCount = useMemo(() => {
     return inquiries.filter((i) => i.status === "unread").length;
   }, [inquiries]);
@@ -993,9 +1063,11 @@ function Dashboard() {
   // Filtered inquiries
   const filteredInquiries = useMemo(() => {
     return inquiries.filter((inq) => {
-      const matchCat = inquiryCategoryFilter === "all" || inq.category === inquiryCategoryFilter;
-      const matchStatus = inquiryStatusFilter === "all" || inq.status === inquiryStatusFilter;
-      return matchCat && matchStatus;
+      const matchesCategory =
+        inquiryCategoryFilter === "ALL" || inq.category === inquiryCategoryFilter;
+      const matchesStatus =
+        inquiryStatusFilter === "ALL" || inq.status === inquiryStatusFilter;
+      return matchesCategory && matchesStatus;
     });
   }, [inquiries, inquiryCategoryFilter, inquiryStatusFilter]);
 
@@ -1004,7 +1076,7 @@ function Dashboard() {
       const { id, ...rest } = data;
       const { error } = await supabase.from("links").update(rest).eq("id", id);
       if (error) {
-        toast.error("Failed to update link", { description: error.message });
+        toast.error("Failed to update link", { description: formatUserError(error, "Please check your inputs and try again.") });
       } else {
         toast.success("Link updated successfully!");
         fetchLinks();
@@ -1016,7 +1088,7 @@ function Dashboard() {
         .insert({ ...data, sort_order: maxOrder + 1, click_count: 0 });
 
       if (error) {
-        toast.error("Failed to create link", { description: error.message });
+        toast.error("Failed to create link", { description: formatUserError(error, "Please check your inputs and try again.") });
       } else {
         toast.success("Link created successfully!");
         fetchLinks();
@@ -1031,7 +1103,7 @@ function Dashboard() {
 
     const { error } = await supabase.from("links").delete().eq("id", id);
     if (error) {
-      toast.error("Failed to delete link", { description: error.message });
+      toast.error("Failed to delete link", { description: formatUserError(error, "Unable to delete link at this time.") });
     } else {
       toast.success("Link deleted");
       fetchLinks();
@@ -1118,7 +1190,7 @@ function Dashboard() {
       toast.success("Admin user removed");
       fetchUsers(sessionToken);
     } catch (err) {
-      toast.error("Delete failed", { description: (err as Error).message });
+      toast.error("Delete failed", { description: formatUserError(err, "Unable to remove user.") });
     }
   }
 

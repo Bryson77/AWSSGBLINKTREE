@@ -9,6 +9,175 @@ interface Env {
   ENQUIRIES_EMAIL?: string;
 }
 
+// ── HTML Email Builders with Hardcore Neo-Brutalism Theme ──
+
+function buildInquiryAdminEmail(data: {
+  name: string;
+  email: string;
+  category: string;
+  message: string;
+  timestamp: string;
+}) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>New Inquiry</title></head>
+<body style="margin: 0; padding: 0; background-color: #F4F4F5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F4F4F5; padding: 40px 15px;">
+    <tr><td align="center">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 520px; background-color: #FFFFFF; border: 3px solid #000000; box-shadow: 6px 6px 0px #000000; padding: 32px 28px;">
+        <tr><td>
+          <div style="display: inline-block; background-color: #000000; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; letter-spacing: 2px; padding: 3px 8px; margin-bottom: 16px;">
+            // AWS_SBG // CONTACT_DISPATCH
+          </div>
+          <h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 900; text-transform: uppercase; color: #000000; line-height: 1.1;">
+            New Student Inquiry <br>
+            <span style="background-color: #7C3AED; color: #FFFFFF; padding: 2px 6px; border: 2px solid #000000; display: inline-block; margin-top: 4px;">
+              ${data.category}
+            </span>
+          </h1>
+        </td></tr>
+        <tr><td style="padding: 16px 0 20px 0;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F4F4F5; border: 2px solid #000000; padding: 14px; font-family: 'Courier New', Courier, monospace; font-size: 12px;">
+            <tr><td style="padding: 4px 0;"><strong>Submitter:</strong> ${data.name}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Email:</strong> <a href="mailto:${data.email}" style="color: #7C3AED; font-weight: bold;">${data.email}</a></td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Category:</strong> ${data.category}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Timestamp:</strong> ${data.timestamp}</td></tr>
+          </table>
+          <div style="margin-top: 16px;">
+            <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; text-transform: uppercase; color: #52525B; margin-bottom: 6px;">
+              // MESSAGE_CONTENT
+            </div>
+            <div style="background-color: #FFFFFF; border: 2px solid #000000; padding: 14px; font-size: 14px; line-height: 1.6; color: #000000; white-space: pre-wrap;">${data.message}</div>
+          </div>
+        </td></tr>
+        <tr><td align="center" style="padding-bottom: 24px;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td width="50%" style="padding-right: 6px;">
+                <a href="mailto:${data.email}?subject=Re:%20AWS%20SBG%20Inquiry%20-%20${encodeURIComponent(data.category)}" target="_blank" style="display: block; background-color: #000000; color: #FFFFFF; border: 2px solid #000000; box-shadow: 3px 3px 0px #7C3AED; font-family: 'Courier New', Courier, monospace; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; padding: 12px 16px; text-align: center;">
+                  REPLY DIRECTLY &rarr;
+                </a>
+              </td>
+              <td width="50%" style="padding-left: 6px;">
+                <a href="https://admin.awssbg.online" target="_blank" style="display: block; background-color: #FFFFFF; color: #000000; border: 2px solid #000000; box-shadow: 3px 3px 0px #000000; font-family: 'Courier New', Courier, monospace; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; padding: 12px 16px; text-align: center;">
+                  VIEW IN ADMIN &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="border-top: 2px dashed #000000; padding-top: 14px;">
+          <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; color: #71717A;">
+            Dispatched to enquiries@awssbg.online &amp; lethabomabilo33@gmail.com.
+          </p>
+        </td></tr>
+      </table>
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 520px; margin-top: 20px;">
+        <tr><td align="center" style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 700; color: #71717A;">
+          &copy; AWS STUDENT BUILDER GROUP &bull; &ldquo;GO BUILD.&rdquo;
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildInquiryUserConfirmation(data: { name: string; category: string }) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>We Received Your Message</title></head>
+<body style="margin: 0; padding: 0; background-color: #F4F4F5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F4F4F5; padding: 40px 15px;">
+    <tr><td align="center">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 500px; background-color: #FFFFFF; border: 3px solid #000000; box-shadow: 6px 6px 0px #000000; padding: 32px 28px;">
+        <tr><td>
+          <div style="display: inline-block; background-color: #000000; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; letter-spacing: 2px; padding: 3px 8px; margin-bottom: 16px;">
+            // AWS_SBG // RECEIPT_CONFIRMATION
+          </div>
+          <h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 900; text-transform: uppercase; color: #000000; line-height: 1.1;">
+            We Got Your Message, <br>
+            <span style="background-color: #2563EB; color: #FFFFFF; padding: 2px 6px; border: 2px solid #000000; display: inline-block; margin-top: 4px;">
+              ${data.name}
+            </span>
+          </h1>
+        </td></tr>
+        <tr><td style="padding: 16px 0 20px 0; color: #27272A; font-size: 14px; line-height: 1.6;">
+          <p style="margin: 0 0 12px 0; font-weight: 500;">
+            Thank you for contacting the <strong>AWS Student Builder Group (AWS SBG)</strong>. We have logged your message regarding <strong>${data.category}</strong>.
+          </p>
+          <p style="margin: 0 0 16px 0; color: #52525B;">
+            Our student leadership team reviews incoming inquiries and will follow up with you directly.
+          </p>
+          <div style="background-color: #F4F4F5; border: 2px solid #000000; padding: 14px; margin-bottom: 20px;">
+            <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; text-transform: uppercase; color: #000000; margin-bottom: 6px;">
+              // JOIN_COMMUNITY_CHANNELS
+            </div>
+            <p style="margin: 0 0 8px 0; font-size: 12px; color: #52525B;">
+              Connect directly with fellow student cloud builders while you wait:
+            </p>
+            <table border="0" cellpadding="0" cellspacing="0">
+              <tr>
+                <td>
+                  <a href="https://discord.gg/invite/awssbg" target="_blank" style="display: inline-block; background-color: #5865F2; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; padding: 6px 12px; text-decoration: none; border: 1px solid #000000; margin-right: 6px;">
+                    DISCORD &rarr;
+                  </a>
+                </td>
+                <td>
+                  <a href="https://chat.whatsapp.com/invite/awssbg" target="_blank" style="display: inline-block; background-color: #25D366; color: #000000; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; padding: 6px 12px; text-decoration: none; border: 1px solid #000000;">
+                    WHATSAPP &rarr;
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </td></tr>
+        <tr><td align="center" style="padding-bottom: 24px;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+            <tr><td align="center">
+              <a href="https://awssbg.online" target="_blank" style="display: block; background-color: #000000; color: #FFFFFF; border: 2px solid #000000; box-shadow: 4px 4px 0px #7C3AED; font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; padding: 12px 20px; text-align: center;">
+                EXPLORE AWS SBG HUB &rarr;
+              </a>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="border-top: 2px dashed #000000; padding-top: 14px;">
+          <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; color: #71717A;">
+            Official student cloud community powered by Amazon Web Services. Zero personal data sale guarantee.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ── Resend Email Dispatch Helper ──
+
+async function sendViaResend(
+  apiKey: string,
+  payload: { from: string; to: string[]; subject: string; html: string; reply_to?: string }
+) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Resend error (${res.status}): ${errorBody}`);
+  }
+
+  return await res.json();
+}
+
+// ── Cloudflare Pages Edge Function Handler ──
+
 export const onRequest = async (context: { request: Request; env: Env }) => {
   const { request, env } = context;
 
@@ -32,7 +201,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
   }
 
   try {
-    const body = await request.json() as {
+    const body = (await request.json()) as {
       name?: string;
       email?: string;
       category?: string;
@@ -43,120 +212,107 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
 
     if (!name || !email || !message) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields (name, email, message)." }),
+        JSON.stringify({ error: "Missing required fields: name, email, message." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || "https://yzmgkreucvbftolijtpl.supabase.co";
-    const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bWdrcmV1Y3ZiZnRvbGlqdHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODc3NzcsImV4cCI6MjEwMzg2Mzc3N30.qvIN3i_hTOEclyULEZhUZg_8PbNC4xM277EOjvjH9OU";
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+    const cleanCategory = (category || "General Inquiry").trim();
+    const cleanMessage = message.trim();
+    const timestamp = new Date().toUTCString();
+
+    // 1. Persist to Supabase inquiries table
+    const supabaseUrl =
+      env.NEXT_PUBLIC_SUPABASE_URL || "https://yzmgkreucvbftolijtpl.supabase.co";
+    const supabaseKey =
+      env.SUPABASE_SERVICE_ROLE_KEY ||
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bWdrcmV1Y3ZiZnRvbGlqdHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODc3NzcsImV4cCI6MjEwMzg2Mzc3N30.qvIN3i_hTOEclyULEZhUZg_8PbNC4xM277EOjvjH9OU";
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Insert into inquiries table
-    const { data: inquiryData, error: dbError } = await supabase
+    let savedId: string | undefined;
+    const { data: dbData, error: dbError } = await supabase
       .from("inquiries")
       .insert({
-        name: name.trim(),
-        email: email.trim(),
-        category: category || "General Inquiry",
-        message: message.trim(),
+        name: cleanName,
+        email: cleanEmail,
+        category: cleanCategory,
+        message: cleanMessage,
         status: "unread",
       })
-      .select()
+      .select("id")
       .single();
 
     if (dbError) {
-      console.warn("DB insert notice:", dbError.message);
+      console.error("Supabase insert warning:", dbError.message);
+    } else {
+      savedId = dbData?.id;
     }
 
-    // 2. Send email notifications if RESEND_API_KEY is configured
-    if (env.RESEND_API_KEY) {
-      const enquiriesRecipient = env.ENQUIRIES_EMAIL || "enquiries@awssbg.online";
-      const adminRecipient = env.ADMIN_NOTIFICATION_EMAIL || "lethabomabilo33@gmail.com";
-      const timestamp = new Date().toUTCString();
+    // 2. Dispatch Formatted Emails via Resend
+    const resendKey = env.RESEND_API_KEY;
 
+    const adminEmail = env.ADMIN_NOTIFICATION_EMAIL || "lethabomabilo33@gmail.com";
+    const enquiriesEmail = env.ENQUIRIES_EMAIL || "enquiries@awssbg.online";
+
+    const emailResults: { admin?: any; student?: any; errors?: string[] } = {};
+    const errors: string[] = [];
+
+    if (resendKey) {
+      // Dispatch A: Formatted Admin Alert
       try {
-        // A. Send Admin & Enquiries Notification
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${env.RESEND_API_KEY}`,
-          },
-          body: JSON.stringify({
-            from: "AWS SBG Inquiries <enquiries@awssbg.online>",
-            to: [enquiriesRecipient, adminRecipient],
-            reply_to: email.trim(),
-            subject: `[AWS SBG Inquiry] ${category || "General"} from ${name}`,
-            html: `
-              <div style="font-family: monospace; background: #F4F4F5; padding: 24px; color: #000000;">
-                <div style="max-width: 540px; margin: 0 auto; background: #FFFFFF; border: 3px solid #000000; padding: 24px; box-shadow: 4px 4px 0px #000000;">
-                  <div style="background: #000000; color: #FFFFFF; padding: 6px 12px; font-weight: 900; font-size: 12px; margin-bottom: 16px;">
-                    // NEW_AWS_SBG_INQUIRY
-                  </div>
-                  <h2 style="font-size: 20px; font-weight: 900; margin: 0 0 16px 0; text-transform: uppercase;">New Contact Submission</h2>
-                  <p><strong>Submitter:</strong> ${name}</p>
-                  <p><strong>Email:</strong> <a href="mailto:${email}" style="color: #7C3AED; font-weight: bold;">${email}</a></p>
-                  <p><strong>Category:</strong> ${category || "General Inquiry"}</p>
-                  <p><strong>Timestamp:</strong> ${timestamp}</p>
-                  <div style="border-top: 2px solid #000000; margin-top: 16px; padding-top: 16px;">
-                    <strong>Message:</strong>
-                    <p style="white-space: pre-wrap; background: #F4F4F5; padding: 12px; border: 2px solid #000000; margin-top: 8px;">${message}</p>
-                  </div>
-                  <div style="margin-top: 20px;">
-                    <a href="mailto:${email}?subject=Re:%20AWS%20SBG%20Inquiry%20-%20${encodeURIComponent(category || "")}" style="display: inline-block; background: #7C3AED; color: #FFFFFF; padding: 10px 16px; text-decoration: none; font-weight: bold; border: 2px solid #000000; box-shadow: 2px 2px 0px #000000;">
-                      Reply to Sender &rarr;
-                    </a>
-                  </div>
-                </div>
-              </div>
-            `,
+        emailResults.admin = await sendViaResend(resendKey, {
+          from: "AWS SBG Inquiries <enquiries@awssbg.online>",
+          to: [adminEmail, enquiriesEmail],
+          reply_to: cleanEmail,
+          subject: `[AWS SBG Inquiry] ${cleanCategory} from ${cleanName}`,
+          html: buildInquiryAdminEmail({
+            name: cleanName,
+            email: cleanEmail,
+            category: cleanCategory,
+            message: cleanMessage,
+            timestamp,
           }),
         });
-
-        // B. Send Receipt Confirmation to Submitter
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${env.RESEND_API_KEY}`,
-          },
-          body: JSON.stringify({
-            from: "AWS Student Builder Group <enquiries@awssbg.online>",
-            to: [email.trim()],
-            subject: "We Received Your Message — AWS Student Builder Group",
-            html: `
-              <div style="font-family: monospace; background: #F4F4F5; padding: 24px; color: #000000;">
-                <div style="max-width: 500px; margin: 0 auto; background: #FFFFFF; border: 3px solid #000000; padding: 24px; box-shadow: 4px 4px 0px #000000;">
-                  <div style="background: #000000; color: #FFFFFF; padding: 6px 12px; font-weight: 900; font-size: 12px; margin-bottom: 16px;">
-                    // AWS_SBG // RECEIPT_CONFIRMATION
-                  </div>
-                  <h2 style="font-size: 20px; font-weight: 900; margin: 0 0 12px 0; text-transform: uppercase;">We Got Your Message, ${name}</h2>
-                  <p style="font-size: 14px; line-height: 1.6;">
-                    Thank you for reaching out to the <strong>AWS Student Builder Group (AWS SBG)</strong>. We have successfully logged your inquiry regarding <strong>${category || "General"}</strong>.
-                  </p>
-                  <p style="font-size: 13px; color: #52525B; line-height: 1.5;">
-                    Our student leadership team reviews all incoming inquiries and will respond to this email address shortly.
-                  </p>
-                  <div style="border-top: 2px dashed #000000; margin-top: 16px; padding-top: 14px; font-size: 11px; color: #71717A;">
-                    Official student builder community powered by Amazon Web Services. Zero personal data sale guarantee.
-                  </div>
-                </div>
-              </div>
-            `,
-          }),
-        });
-      } catch (emailErr) {
-        console.warn("Email dispatch error:", emailErr);
+      } catch (e) {
+        const msg = `Failed admin email dispatch: ${(e as Error).message}`;
+        console.error(msg);
+        errors.push(msg);
       }
+
+      // Dispatch B: Formatted Confirmation Receipt to Student
+      try {
+        emailResults.student = await sendViaResend(resendKey, {
+          from: "AWS Student Builder Group <enquiries@awssbg.online>",
+          to: [cleanEmail],
+          subject: "We Received Your Message — AWS Student Builder Group",
+          html: buildInquiryUserConfirmation({
+            name: cleanName,
+            category: cleanCategory,
+          }),
+        });
+      } catch (e) {
+        const msg = `Failed student confirmation dispatch: ${(e as Error).message}`;
+        console.error(msg);
+        errors.push(msg);
+      }
+    } else {
+      console.warn("RESEND_API_KEY not configured. Email notifications skipped.");
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Inquiry submitted successfully",
-        inquiryId: inquiryData?.id,
+        message: "Inquiry processed and dispatched successfully.",
+        inquiryId: savedId,
+        emails: {
+          adminDispatched: !errors.some((e) => e.includes("admin")),
+          studentDispatched: !errors.some((e) => e.includes("student")),
+        },
+        warnings: errors.length > 0 ? errors : undefined,
       }),
       {
         status: 200,
@@ -167,9 +323,19 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
       }
     );
   } catch (err) {
+    console.error("Inquiry handler failure:", err);
     return new Response(
-      JSON.stringify({ error: "Server error processing inquiry", details: (err as Error).message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: "Failed to process inquiry.",
+        details: (err as Error).message,
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
     );
   }
 };
