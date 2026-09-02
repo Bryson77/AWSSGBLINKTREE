@@ -49,19 +49,19 @@ const PILLARS = [
 const FAQS = [
   {
     q: "What is the AWS Student Builder Group (AWS SBG)?",
-    a: "AWS SBG is an official global student community program powered by and affiliated with Amazon Web Services (AWS) across 60+ countries. It empowers students to learn cloud architecture, build real projects, and launch cloud computing careers.",
+    a: "AWS SBG is a global student community program supported by Amazon Web Services (AWS) across 60+ countries. It empowers students to learn cloud architecture, build real projects, and launch cloud computing careers.",
   },
   {
     q: "Who is eligible to join AWS SBG activities?",
-    a: "Any university or college student regardless of academic major or experience level. All sessions are beginner-friendly with advanced tracks for experienced developers.",
+    a: "Any student aged 18+ who is actively enrolled at a university or college, regardless of academic major or experience level. All sessions are beginner-friendly with advanced tracks for experienced developers.",
   },
   {
     q: "Are the workshops and Study Jams free?",
-    a: "Yes! All AWS SBG Study Jams, workshops, and community Discord/WhatsApp sessions are 100% free of charge.",
+    a: "Yes! All AWS SBG Study Jams, workshops, and community WhatsApp/Meetup sessions are 100% free of charge.",
   },
   {
     q: "How do students get AWS certification exam vouchers?",
-    a: "Active participation in scheduled AWS Study Jams, completing hands-on labs, and meeting bootcamp milestones unlocks access to official AWS certification discount vouchers.",
+    a: "Certification vouchers come through AWS Builder Center's Student Rewards program, not through this chapter directly. Verify your student status on AWS Builder Center to unlock up to $579 in resources — including AWS credits, 12 months of premium Skill Builder access, and a certification exam voucher. Attending our Study Jams and labs is the best way to prep for the exam once you're verified.",
   },
 ];
 
@@ -96,7 +96,7 @@ export default function AboutPage() {
                 About AWS Student Builder Group
               </h1>
               <p className="mt-1 font-mono text-xs font-semibold text-zinc-600">
-                Official global student-led cloud computing community powered by AWS.
+                A student-led cloud computing community, supported by AWS, active in 60+ countries.
               </p>
             </div>
 
@@ -107,7 +107,7 @@ export default function AboutPage() {
                 <span>AWS Affiliation &amp; Community Charter</span>
               </div>
               <p className="font-mono text-[12px] font-bold leading-relaxed text-black">
-                AWS STUDENT BUILDER GROUP (AWS SBG) IS AN OFFICIAL STUDENT-LED COMMUNITY AFFILIATED WITH, POWERED BY, AND SUPPORTED BY AMAZON WEB SERVICES (AWS) ACROSS 60+ COUNTRIES. WE ARE RUN BY STUDENT BUILDERS TO DELIVER HANDS-ON WORKSHOPS, STUDY JAMS, AND CERTIFICATION PREPARATION. WE STRICTLY NEVER SELL PERSONAL DATA.
+                AWS STUDENT BUILDER GROUP (AWS SBG) IS A STUDENT-LED COMMUNITY SUPPORTED BY AMAZON WEB SERVICES (AWS) ACROSS 60+ COUNTRIES. WE ARE RUN BY STUDENT BUILDERS TO DELIVER HANDS-ON WORKSHOPS, STUDY JAMS, AND CERTIFICATION PREPARATION.
               </p>
             </div>
 

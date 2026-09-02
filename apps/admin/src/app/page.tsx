@@ -229,7 +229,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
         });
       } else if (mode === "recovery") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}/update-password`,
         });
         if (error) throw error;
         toast.success("Recovery email sent", {
@@ -764,6 +764,135 @@ function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// ── Dedicated Unskippable Setup Password Screen for Invites & Password Resets ──
+function ForceSetPasswordScreen({
+  email,
+  onComplete,
+}: {
+  email: string;
+  onComplete: () => void;
+}) {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+      data: { password_set: true },
+    });
+
+    if (error) {
+      toast.error("Password setup failed", {
+        description: formatUserError(error, "Unable to establish password. Please try again."),
+      });
+      setLoading(false);
+    } else {
+      toast.success("Master password configured!", {
+        description: "Your credentials are now active. Welcome to AWS SBG Admin.",
+      });
+
+      // Clear the invite/recovery hash tokens from the browser URL bar
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+
+      // Notify security webhook
+      fetch("/api/notify-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "password_changed", email }),
+      }).catch(() => {});
+
+      setLoading(false);
+      onComplete();
+    }
+  }
+
+  return (
+    <div className="brutal-grid-bg flex min-h-screen items-center justify-center bg-[#F4F4F5] p-4 sm:p-6">
+      <div className="w-full max-w-md border-[3px] border-black bg-white p-6 sm:p-8 shadow-[8px_8px_0px_#000000]">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center border-2 border-black bg-white p-2 shadow-[3px_3px_0px_#000000]">
+            <Image
+              src="/logo.png"
+              alt="AWS SBG Logo"
+              width={48}
+              height={48}
+              className="h-full w-full object-contain"
+              priority
+            />
+          </div>
+          <div className="mb-1 inline-block border border-black bg-accent-purple px-2 py-0.5 font-mono text-[9px] font-black text-white">
+            // MANDATORY_SECURITY_GATEWAY
+          </div>
+          <h1 className="text-2xl font-black uppercase tracking-tight text-black">
+            Configure Password
+          </h1>
+          <p className="mt-1 font-mono text-xs font-medium text-zinc-600">
+            Welcome to the AWS SBG Admin Console. Set a master password to activate your account.
+          </p>
+          {email && (
+            <div className="mt-3 border border-black bg-zinc-100 px-2.5 py-1 font-mono text-[11px] font-bold text-black">
+              Account: {email}
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={handleSetPassword} className="space-y-4">
+          <div>
+            <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+              Master Password
+            </label>
+            <input
+              type="password"
+              required
+              placeholder="••••••••"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+            />
+            <PasswordStrengthMeter password={newPassword} />
+          </div>
+
+          <div>
+            <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              required
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || newPassword.length < 8}
+            className="w-full border-2 border-black bg-black py-3 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? "Activating Credentials…" : "Set Password & Enter Console →"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -2050,24 +2179,58 @@ function Dashboard() {
 // ── Page Root ──
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [isRecovery, setIsRecovery] = useState(false);
+  const [mustSetPassword, setMustSetPassword] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+
+  const checkInviteOrRecovery = useCallback((session: any) => {
+    if (typeof window === "undefined") return false;
+    const hash = window.location.hash || "";
+    const search = window.location.search || "";
+    const hasInviteFlag = hash.includes("type=invite") || search.includes("type=invite");
+    const hasRecoveryFlag = hash.includes("type=recovery") || search.includes("type=recovery");
+
+    // Intercept if user was invited and hasn't flagged password_set in metadata
+    const isUnsetInvitedUser =
+      Boolean(session?.user?.invited_at) && session?.user?.user_metadata?.password_set !== true;
+
+    return hasInviteFlag || hasRecoveryFlag || isUnsetInvitedUser;
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setAuthed(!!session);
+      if (session?.user) {
+        setUserEmail(session.user.email || "");
+        if (checkInviteOrRecovery(session)) {
+          setMustSetPassword(true);
+        }
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       setAuthed(!!session);
-      if (event === "PASSWORD_RECOVERY") {
-        setIsRecovery(true);
+      if (session?.user) {
+        setUserEmail(session.user.email || "");
+        if (
+          event === "PASSWORD_RECOVERY" ||
+          event === "USER_UPDATED" ||
+          event === "SIGNED_IN" ||
+          checkInviteOrRecovery(session)
+        ) {
+          if (checkInviteOrRecovery(session)) {
+            setMustSetPassword(true);
+          }
+        }
+      } else {
+        setUserEmail("");
+        setMustSetPassword(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [checkInviteOrRecovery]);
 
   if (authed === null) {
     return (
@@ -2081,12 +2244,15 @@ export default function AdminPage() {
     return <LoginForm onLogin={() => setAuthed(true)} />;
   }
 
-  return (
-    <>
-      <Dashboard />
-      {isRecovery && (
-        <PasswordUpdateModal onClose={() => setIsRecovery(false)} />
-      )}
-    </>
-  );
+  // 🔒 MANDATORY SECURITY GATEWAY: Intercept if user arrived via invite/recovery, or hasn't configured password
+  if (mustSetPassword) {
+    return (
+      <ForceSetPasswordScreen
+        email={userEmail}
+        onComplete={() => setMustSetPassword(false)}
+      />
+    );
+  }
+
+  return <Dashboard />;
 }

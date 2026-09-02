@@ -6,7 +6,7 @@
  * Submissions save to Supabase 'inquiries' table and dispatch notifications to lethabomabilo33@gmail.com.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -20,40 +20,35 @@ import {
   HiOutlineSparkles,
 } from "react-icons/hi2";
 import {
-  SiDiscord,
   SiWhatsapp,
-  SiGithub,
+  SiMeetup,
 } from "react-icons/si";
 import { FaLinkedinIn } from "react-icons/fa6";
 
-const CHANNELS = [
+const DEFAULT_CHANNELS = [
   {
-    name: "Discord Server",
-    desc: "Study Jams, technical discussions, voice channels & hackathon teams.",
-    icon: SiDiscord,
-    color: "text-[#5865F2]",
-    href: "https://discord.gg/invite/awssbg",
-  },
-  {
+    platform: "whatsapp",
     name: "WhatsApp Community",
     desc: "Instant workshop alerts, session links, and voucher drop notifications.",
     icon: SiWhatsapp,
     color: "text-[#25D366]",
-    href: "https://chat.whatsapp.com/invite/awssbg",
+    href: process.env.NEXT_PUBLIC_WHATSAPP_URL || "https://chat.whatsapp.com/CctGVCDhxhA8qcIZzHXpZg?s=cl&p=i&mlu=4&ilr=4",
   },
   {
-    name: "GitHub Organization",
-    desc: "Open source workshop materials, cloud architecture templates & labs.",
-    icon: SiGithub,
-    color: "text-black",
-    href: "https://github.com/awssbg",
+    platform: "meetup",
+    name: "Meetup Events",
+    desc: "RSVP for upcoming in-person Study Jams, certification bootcamps, and hackathons.",
+    icon: SiMeetup,
+    color: "text-[#ED1C40]",
+    href: "https://www.meetup.com/aws-sbg-at-tshwane-university-of-technolog-soshanguve-south/",
   },
   {
+    platform: "linkedin",
     name: "LinkedIn Community",
-    desc: "Connect with cloud architects, alumni, and AWS Student Builder Group leaders.",
+    desc: "Connect with student cloud builders, alumni, and AWS SBG leadership.",
     icon: FaLinkedinIn,
     color: "text-[#0A66C2]",
-    href: "https://linkedin.com/company/awssbg",
+    href: "https://www.linkedin.com/company/aws-cloud-clubs-tut",
   },
 ];
 
@@ -67,6 +62,7 @@ const CATEGORIES = [
 ];
 
 export default function ContactPage() {
+  const [channels, setChannels] = useState(DEFAULT_CHANNELS);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -74,6 +70,28 @@ export default function ContactPage() {
     message: "",
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Dynamically load active community channel URLs from database
+  useEffect(() => {
+    async function loadDynamicLinks() {
+      const { data } = await supabase
+        .from("links")
+        .select("platform, url")
+        .eq("is_active", true);
+
+      if (data && data.length > 0) {
+        setChannels((prev) =>
+          prev.map((ch) => {
+            const match = data.find(
+              (d) => d.platform?.toLowerCase() === ch.platform.toLowerCase()
+            );
+            return match?.url ? { ...ch, href: match.url } : ch;
+          })
+        );
+      }
+    }
+    loadDynamicLinks();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,7 +145,7 @@ export default function ContactPage() {
       });
     } catch (err) {
       console.error("Submission error:", err);
-      toast.error("Failed to send message. Please reach out directly on Discord or WhatsApp.");
+      toast.error("Failed to send message. Please reach out directly on WhatsApp or LinkedIn.");
     } finally {
       setSubmitting(false);
     }
@@ -174,8 +192,8 @@ export default function ContactPage() {
                 <HiOutlineChatBubbleLeftRight className="h-4 w-4" />
                 <span>Instant Community Channels</span>
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {CHANNELS.map((channel) => {
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {channels.map((channel) => {
                   const Icon = channel.icon;
                   return (
                     <a

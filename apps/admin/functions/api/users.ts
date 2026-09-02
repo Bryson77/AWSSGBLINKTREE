@@ -67,6 +67,25 @@ function buildAdminInviteEmail(data: {
           </p>
         </td></tr>
         <tr><td style="border-top: 2px dashed #000000; padding-top: 14px; margin-top: 14px;">
+          <p style="margin: 0 0 8px 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; font-weight: 900; color: #000000; text-transform: uppercase;">
+            // OFFICIAL_CHANNELS
+          </p>
+          <table border="0" cellpadding="0" cellspacing="0">
+            <tr>
+              <td>
+                <a href="https://chat.whatsapp.com/CctGVCDhxhA8qcIZzHXpZg?s=cl&p=i&mlu=4&ilr=4" target="_blank" style="display: inline-block; background-color: #25D366; color: #000000; font-family: 'Courier New', Courier, monospace; font-size: 10px; font-weight: 900; padding: 4px 8px; text-decoration: none; border: 1px solid #000000; margin-right: 6px;">
+                  WHATSAPP &rarr;
+                </a>
+              </td>
+              <td>
+                <a href="https://www.instagram.com/awsstudentbuildergroup_tut/" target="_blank" style="display: inline-block; background-color: #E1306C; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 10px; font-weight: 900; padding: 4px 8px; text-decoration: none; border: 1px solid #000000;">
+                  INSTAGRAM &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding-top: 12px;">
           <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; color: #71717A;">
             Official student cloud community powered by Amazon Web Services. Zero personal data sale guarantee.
           </p>
@@ -214,7 +233,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
       const targetEmail = email.toLowerCase().trim();
       const targetName = name?.trim() || targetEmail.split("@")[0];
       const targetRole = role || "admin";
-      const redirectUrl = "https://admin.awssbg.online";
+      const redirectUrl = "https://admin.awssbg.online/update-password";
 
       // 1. Generate secure invite verification link from Supabase Auth
       let actionLink = "";

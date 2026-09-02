@@ -45,7 +45,7 @@ export default function Hero() {
 
         {/* Subtext */}
         <p className="animate-hero animate-hero-delay-3 mx-auto max-w-[440px] text-[13px] sm:text-[14px] font-medium leading-relaxed text-zinc-800">
-          Student cloud builder community. Hands-on AWS Study Jams, Cloud Practitioner &amp; Solutions Architect certification prep, hackathons, and industry mentorship.
+          A student-led cloud computing community, supported by AWS, active in 60+ countries. Hands-on AWS Study Jams, certification prep, and real-world projects.
         </p>
 
         {/* Core Pillars (0px Sharp Brutalist Chips) */}

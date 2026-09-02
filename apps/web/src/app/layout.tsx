@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s | AWS Student Builder Group",
   },
   description:
-    "Official website & community hub for the AWS Student Builder Group (AWS SBG). Connect with student cloud builders, attend hands-on AWS Study Jams, prepare for AWS certifications, and access exclusive learning resources.",
+    "A student-led cloud computing community, supported by AWS, active in 60+ countries. Connect with student builders, attend hands-on AWS Study Jams, prepare for AWS certifications, and build real cloud projects.",
   keywords: [
     "AWS Student Builder Group",
     "AWS SBG",
@@ -142,7 +142,7 @@ const jsonLd = {
           "name": "How do students join AWS SBG activities and Study Jams?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Students can join the official community by accessing the workshop links, WhatsApp/Discord community groups, and AWS Builder Center links hosted on the official hub at https://awssbg.online.",
+            "text": "Students can join the official community by accessing the workshop links, WhatsApp/LinkedIn community groups, and AWS Builder Center links hosted on the official hub at https://awssbg.online.",
           },
         },
         {
@@ -151,6 +151,14 @@ const jsonLd = {
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "AWS SBG hosts structured bootcamps and study groups for AWS Certified Cloud Practitioner, AWS Certified Solutions Architect Associate, and AWS Certified Developer certifications.",
+          },
+        },
+        {
+          "@type": "Question",
+          "name": "How do students get AWS certification exam vouchers?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Certification vouchers come through AWS Builder Center's Student Rewards program, not through this chapter directly. Verify your student status on AWS Builder Center to unlock up to $579 in resources — including AWS credits, 12 months of premium Skill Builder access, and a certification exam voucher. Attending our Study Jams and labs is the best way to prep for the exam once you're verified.",
           },
         },
       ],

@@ -113,13 +113,13 @@ function buildInquiryUserConfirmation(data: { name: string; category: string }) 
             <table border="0" cellpadding="0" cellspacing="0">
               <tr>
                 <td>
-                  <a href="https://discord.gg/invite/awssbg" target="_blank" style="display: inline-block; background-color: #5865F2; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; padding: 6px 12px; text-decoration: none; border: 1px solid #000000; margin-right: 6px;">
-                    DISCORD &rarr;
+                  <a href="https://chat.whatsapp.com/CctGVCDhxhA8qcIZzHXpZg?s=cl&p=i&mlu=4&ilr=4" target="_blank" style="display: inline-block; background-color: #25D366; color: #000000; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; padding: 6px 12px; text-decoration: none; border: 1px solid #000000; margin-right: 6px;">
+                    WHATSAPP &rarr;
                   </a>
                 </td>
                 <td>
-                  <a href="https://chat.whatsapp.com/invite/awssbg" target="_blank" style="display: inline-block; background-color: #25D366; color: #000000; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; padding: 6px 12px; text-decoration: none; border: 1px solid #000000;">
-                    WHATSAPP &rarr;
+                  <a href="https://www.instagram.com/awsstudentbuildergroup_tut/" target="_blank" style="display: inline-block; background-color: #E1306C; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; padding: 6px 12px; text-decoration: none; border: 1px solid #000000;">
+                    INSTAGRAM &rarr;
                   </a>
                 </td>
               </tr>
