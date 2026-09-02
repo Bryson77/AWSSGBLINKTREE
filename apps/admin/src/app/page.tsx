@@ -20,7 +20,6 @@ import {
   HiOutlineKey,
   HiOutlineCheck,
   HiOutlineXMark,
-  HiOutlineQrCode,
   HiOutlineUserPlus,
 } from "react-icons/hi2";
 
@@ -515,7 +514,14 @@ function InviteUserModal({
         }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(text || `Server error (${res.status})`);
+      }
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to invite user");
       }
@@ -608,125 +614,6 @@ function InviteUserModal({
           </button>
         </div>
       </form>
-    </div>
-  );
-}
-
-// ── MFA Authenticator Setup Modal ──
-function MfaSetupModal({ onClose }: { onClose: () => void }) {
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [secret, setSecret] = useState<string | null>(null);
-  const [factorId, setFactorId] = useState<string | null>(null);
-  const [verifyCode, setVerifyCode] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    async function startEnrollment() {
-      const { data, error } = await supabase.auth.mfa.enroll({
-        factorType: "totp",
-        issuer: "awssbg.online",
-      });
-
-      if (error) {
-        toast.error("MFA Enrollment Error", { description: error.message });
-      } else if (data) {
-        setFactorId(data.id);
-        setSecret(data.totp.secret);
-        setQrCode(data.totp.qr_code);
-      }
-    }
-    startEnrollment();
-  }, []);
-
-  async function handleVerify(e: React.FormEvent) {
-    e.preventDefault();
-    if (!factorId || !verifyCode.trim()) return;
-
-    setLoading(true);
-    const { error } = await supabase.auth.mfa.challengeAndVerify({
-      factorId,
-      code: verifyCode.trim(),
-    });
-
-    if (error) {
-      toast.error("Verification failed", { description: error.message });
-      setLoading(false);
-    } else {
-      toast.success("2FA Authenticator activated successfully!", {
-        description: "Your admin account is now hardened with TOTP verification.",
-      });
-      setLoading(false);
-      onClose();
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-5 backdrop-blur-xs">
-      <div className="w-full max-w-sm border-[3px] border-black bg-white p-6 shadow-[8px_8px_0px_#000000]">
-        <div className="border-b-2 border-black pb-3">
-          <div className="mb-1 inline-block border border-black bg-accent-purple px-2 py-0.2 font-mono text-[9px] font-black text-white">
-            // HARDENED_SECURITY
-          </div>
-          <h2 className="text-xl font-black uppercase tracking-tight text-black">
-            Setup 2FA TOTP
-          </h2>
-          <p className="font-mono text-xs font-medium text-zinc-600">
-            Scan with Google Authenticator or 1Password.
-          </p>
-        </div>
-
-        {qrCode ? (
-          <div className="my-4 flex flex-col items-center">
-            <div
-              className="border-2 border-black p-2 bg-white shadow-[2px_2px_0px_#000000]"
-              dangerouslySetInnerHTML={{ __html: qrCode }}
-            />
-            {secret && (
-              <p className="mt-2 font-mono text-[10px] text-zinc-600 select-all">
-                Key: <code className="font-bold text-black">{secret}</code>
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="my-6 flex justify-center">
-            <div className="h-6 w-6 animate-spin border-2 border-black border-t-accent-purple" />
-          </div>
-        )}
-
-        <form onSubmit={handleVerify} className="space-y-3">
-          <div>
-            <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
-              Enter 6-Digit Auth Code
-            </label>
-            <input
-              type="text"
-              required
-              maxLength={6}
-              placeholder="123456"
-              value={verifyCode}
-              onChange={(e) => setVerifyCode(e.target.value)}
-              className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-center text-lg font-black tracking-widest text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 border-2 border-black bg-white px-3 py-2 font-mono text-xs font-bold uppercase text-black hover:bg-zinc-200"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || verifyCode.length < 6}
-              className="flex-1 border-2 border-black bg-black px-3 py-2 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#7C3AED] hover:bg-accent-purple disabled:opacity-50"
-            >
-              {loading ? "Verifying…" : "Enable 2FA →"}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }
@@ -839,7 +726,6 @@ function Dashboard() {
   const [editing, setEditing] = useState<Partial<LinkItem> | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showMfaModal, setShowMfaModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"links" | "team">("links");
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
@@ -1051,13 +937,6 @@ function Dashboard() {
                 className="border-2 border-black bg-white px-2.5 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100"
               >
                 <HiOutlineKey className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setShowMfaModal(true)}
-                title="Setup 2FA TOTP"
-                className="border-2 border-black bg-white px-2.5 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100"
-              >
-                <HiOutlineQrCode className="h-4 w-4" />
               </button>
               <a
                 href="https://awssbg.online"
@@ -1303,8 +1182,6 @@ function Dashboard() {
           onUserInvited={() => fetchUsers(sessionToken)}
         />
       )}
-
-      {showMfaModal && <MfaSetupModal onClose={() => setShowMfaModal(false)} />}
 
       {showPasswordModal && (
         <PasswordUpdateModal onClose={() => setShowPasswordModal(false)} />
