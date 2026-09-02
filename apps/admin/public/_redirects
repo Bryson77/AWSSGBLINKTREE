@@ -1,6 +1,1 @@
-# Cloudflare Pages Redirects & Subdomain Routing
-# Hostname-based proxy/rewrite for dedicated admin subdomain
-https://admin.awssbg.online/*  /admin/:splat  200
-https://admi.awssbg.online/*   /admin/:splat  200
-http://admin.awssbg.online/*   /admin/:splat  200
-http://admi.awssbg.online/*    /admin/:splat  200
+# Cloudflare Pages Redirects

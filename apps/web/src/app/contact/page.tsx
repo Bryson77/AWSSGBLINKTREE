@@ -23,8 +23,8 @@ import {
   SiDiscord,
   SiWhatsapp,
   SiGithub,
-  FaLinkedinIn,
 } from "react-icons/si";
+import { FaLinkedinIn } from "react-icons/fa6";
 
 const CHANNELS = [
   {

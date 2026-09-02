@@ -7,6 +7,5 @@ compatibility_flags = ["nodejs_compat"]
 ADMIN_NOTIFICATION_EMAIL = "lethabomabilo33@gmail.com"
 ENQUIRIES_EMAIL = "enquiries@awssbg.online"
 NEXT_PUBLIC_SUPABASE_URL = "https://yzmgkreucvbftolijtpl.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY = ""
 NEXT_PUBLIC_SITE_URL = "https://awssbg.online"
 NEXT_PUBLIC_ADMIN_URL = "https://admin.awssbg.online"
