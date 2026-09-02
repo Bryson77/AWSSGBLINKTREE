@@ -10,5 +10,12 @@
     "NEXT_PUBLIC_SUPABASE_URL": "https://yzmgkreucvbftolijtpl.supabase.co",
     "NEXT_PUBLIC_SITE_URL": "https://awssbg.online",
     "NEXT_PUBLIC_ADMIN_URL": "https://admin.awssbg.online"
-  }
+  },
+  // Secrets are stored encrypted in Cloudflare — set via:
+  // npx wrangler secret put RESEND_API_KEY --config apps/email-worker/wrangler.jsonc
+  // npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --config apps/email-worker/wrangler.jsonc
+  "secrets": [
+    "RESEND_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY"
+  ]
 }
