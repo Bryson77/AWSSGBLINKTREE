@@ -12,6 +12,7 @@
     "dev:email": "npm run dev --workspace=email-worker",
     "build:web": "npm run build --workspace=web",
     "build:admin": "npm run build --workspace=admin",
+    "build:email": "npm run build --workspace=email-worker",
     "build": "npm run build --workspaces --if-present",
     "deploy:web": "npm run deploy --workspace=web",
     "deploy:admin": "npm run deploy --workspace=admin",
