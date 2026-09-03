@@ -1,12 +1,7 @@
 "use client";
 
-/**
- * Contact Page — AWS Student Builder Group.
- * Features: Direct Community Hub cards + Interactive Neo-Brutalist Inquiries Form.
- * Submissions save to Supabase 'inquiries' table and dispatch notifications to lethabomabilo33@gmail.com.
- */
-
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -19,10 +14,7 @@ import {
   HiOutlinePaperAirplane,
   HiOutlineSparkles,
 } from "react-icons/hi2";
-import {
-  SiWhatsapp,
-  SiMeetup,
-} from "react-icons/si";
+import { SiWhatsapp, SiMeetup } from "react-icons/si";
 import { FaLinkedinIn } from "react-icons/fa6";
 
 const DEFAULT_CHANNELS = [
@@ -31,7 +23,6 @@ const DEFAULT_CHANNELS = [
     name: "WhatsApp Community",
     desc: "Instant workshop alerts, session links, and voucher drop notifications.",
     icon: SiWhatsapp,
-    color: "text-[#25D366]",
     href: process.env.NEXT_PUBLIC_WHATSAPP_URL || "https://chat.whatsapp.com/CctGVCDhxhA8qcIZzHXpZg?s=cl&p=i&mlu=4&ilr=4",
   },
   {
@@ -39,7 +30,6 @@ const DEFAULT_CHANNELS = [
     name: "Meetup Events",
     desc: "RSVP for upcoming in-person Study Jams, certification bootcamps, and hackathons.",
     icon: SiMeetup,
-    color: "text-[#ED1C40]",
     href: "https://www.meetup.com/aws-sbg-at-tshwane-university-of-technolog-soshanguve-south/",
   },
   {
@@ -47,7 +37,6 @@ const DEFAULT_CHANNELS = [
     name: "LinkedIn Community",
     desc: "Connect with student cloud builders, alumni, and AWS SBG leadership.",
     icon: FaLinkedinIn,
-    color: "text-[#0A66C2]",
     href: "https://www.linkedin.com/company/aws-cloud-clubs-tut",
   },
 ];
@@ -61,7 +50,11 @@ const CATEGORIES = [
   "Other",
 ];
 
-export default function ContactPage() {
+export default function OrgContactClient() {
+  const params = useParams();
+  const orgSlug = (params?.org as string) || "tut";
+
+  const [orgId, setOrgId] = useState<string | null>(null);
   const [channels, setChannels] = useState(DEFAULT_CHANNELS);
   const [formData, setFormData] = useState({
     name: "",
@@ -71,27 +64,41 @@ export default function ContactPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  // Dynamically load active community channel URLs from database
   useEffect(() => {
-    async function loadDynamicLinks() {
-      const { data } = await supabase
-        .from("links")
-        .select("platform, url")
-        .eq("is_active", true);
+    async function loadOrgAndChannels() {
+      try {
+        const { data: orgData } = await supabase
+          .from("orgs")
+          .select("id")
+          .eq("slug", orgSlug)
+          .single();
 
-      if (data && data.length > 0) {
-        setChannels((prev) =>
-          prev.map((ch) => {
-            const match = data.find(
-              (d) => d.platform?.toLowerCase() === ch.platform.toLowerCase()
+        if (orgData) {
+          setOrgId(orgData.id);
+          const { data: linksData } = await supabase
+            .from("links")
+            .select("platform, url")
+            .eq("org_id", orgData.id)
+            .eq("is_active", true);
+
+          if (linksData && linksData.length > 0) {
+            setChannels((prev) =>
+              prev.map((ch) => {
+                const match = linksData.find(
+                  (d) => d.platform?.toLowerCase() === ch.platform.toLowerCase()
+                );
+                return match?.url ? { ...ch, href: match.url } : ch;
+              })
             );
-            return match?.url ? { ...ch, href: match.url } : ch;
-          })
-        );
+          }
+        }
+      } catch (err) {
+        console.error("Failed loading org info:", err);
       }
     }
-    loadDynamicLinks();
-  }, []);
+
+    loadOrgAndChannels();
+  }, [orgSlug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,11 +111,11 @@ export default function ContactPage() {
     setSubmitting(true);
 
     try {
-      // Dispatch to hardened edge API for rate limiting, validation, persistence & email notification
       const res = await fetch("/api/inquiries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          org_id: orgId || undefined,
           name: formData.name.trim(),
           email: formData.email.trim(),
           category: formData.category,
@@ -116,9 +123,10 @@ export default function ContactPage() {
         }),
       });
 
+      const json = await res.json();
+
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Server returned ${res.status}`);
+        throw new Error(json.error || "Submission rejected by server.");
       }
 
       toast.success("Message sent successfully!", {
@@ -133,7 +141,7 @@ export default function ContactPage() {
       });
     } catch (err) {
       console.error("Submission error:", err);
-      toast.error("Failed to send message. Please reach out directly on WhatsApp or LinkedIn.");
+      toast.error("Failed to send message: " + (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -145,36 +153,32 @@ export default function ContactPage() {
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="mx-auto max-w-[680px]">
-          {/* Back button */}
           <div className="mb-6">
             <Link
-              href="/"
+              href={`/${orgSlug}`}
               className="inline-flex items-center gap-1.5 border-2 border-black bg-white px-3 py-1 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-black hover:text-white transition-all"
             >
               <HiArrowLeft className="h-3.5 w-3.5" />
-              <span>Return to Home</span>
+              <span>Return to AWS SBG Hub</span>
             </Link>
           </div>
 
-          {/* Main Card */}
           <div className="border-[3px] border-black bg-white p-6 sm:p-9 shadow-[6px_6px_0px_#000000]">
-            {/* Header Stamp */}
             <div className="mb-6 border-b-2 border-black pb-5">
               <div className="mb-2 inline-flex items-center gap-1.5 border-2 border-black bg-black px-2.5 py-0.5 text-white shadow-[2px_2px_0px_#7C3AED]">
                 <HiOutlineEnvelope className="h-3.5 w-3.5 text-accent-purple" />
                 <span className="font-mono text-[10px] font-black uppercase tracking-widest text-white">
-                  // CONTACT_US // INQUIRIES_AND_COMMUNITY
+                  // CONTACT // {orgSlug.toUpperCase()}
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black">
-                Get In Touch With AWS SBG
+                Contact AWS SBG @{orgSlug.toUpperCase()}
               </h1>
               <p className="mt-1 font-mono text-xs font-semibold text-zinc-600">
-                Have questions about Study Jams, partnerships, or certification vouchers? Send us a message or join our live community channels.
+                Have questions for our group? Submit an inquiry and our student leaders will follow up directly.
               </p>
             </div>
 
-            {/* Direct Community Channels */}
             <div className="mb-8">
               <h2 className="mb-3 font-mono text-xs font-black uppercase tracking-wider text-black flex items-center gap-1.5">
                 <HiOutlineChatBubbleLeftRight className="h-4 w-4" />
@@ -208,15 +212,13 @@ export default function ContactPage() {
               </div>
             </div>
 
-            {/* Inquiry Form */}
             <div className="border-t-2 border-black pt-6">
               <h2 className="mb-4 font-mono text-xs font-black uppercase tracking-wider text-black flex items-center gap-1.5">
                 <HiOutlinePaperAirplane className="h-4 w-4 text-accent-purple" />
-                <span>Send Direct Inquiry to Leadership</span>
+                <span>Send Direct Inquiry to Group Leadership</span>
               </h2>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                {/* Name */}
                 <div>
                   <label className="mb-1 block font-mono text-xs font-black uppercase text-black">
                     Your Name *
@@ -231,7 +233,6 @@ export default function ContactPage() {
                   />
                 </div>
 
-                {/* Email */}
                 <div>
                   <label className="mb-1 block font-mono text-xs font-black uppercase text-black">
                     Email Address *
@@ -246,7 +247,6 @@ export default function ContactPage() {
                   />
                 </div>
 
-                {/* Category */}
                 <div>
                   <label className="mb-1 block font-mono text-xs font-black uppercase text-black">
                     Inquiry Category *
@@ -264,7 +264,6 @@ export default function ContactPage() {
                   </select>
                 </div>
 
-                {/* Message */}
                 <div>
                   <label className="mb-1 block font-mono text-xs font-black uppercase text-black">
                     Your Message *
@@ -272,14 +271,13 @@ export default function ContactPage() {
                   <textarea
                     required
                     rows={4}
-                    placeholder="Tell us what you'd like to collaborate on, ask about Study Jams, or suggest a workshop topic..."
+                    placeholder="Tell us what you'd like to collaborate on or ask..."
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     className="w-full border-2 border-black bg-white px-3 py-2.5 font-sans text-sm text-black placeholder:text-zinc-400 focus:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-accent-purple resize-y"
                   />
                 </div>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={submitting}

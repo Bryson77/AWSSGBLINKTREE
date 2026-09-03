@@ -28,3 +28,11 @@ lerna-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# TypeScript build info cache
+*.tsbuildinfo
+
+# Documentation
+docs/
+/docs/
+

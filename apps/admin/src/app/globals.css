@@ -31,6 +31,10 @@
 
 /* ── Base ──────────────────────────────────────── */
 
+*, ::before, ::after {
+  border-radius: 0px !important;
+}
+
 html {
   scroll-behavior: smooth;
   background-color: #F4F4F5;

@@ -1,4 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
+import { enforceRateLimit, RATE_LIMIT_RULES } from "@awssbg/shared/src/lib/rateLimit";
+import { logActivity } from "@awssbg/shared/src/lib/audit";
+import { escapeHtml } from "@awssbg/shared/src/lib/sanitize";
 
 interface Env {
   NEXT_PUBLIC_SUPABASE_URL?: string;
@@ -14,7 +17,14 @@ function buildAdminInviteEmail(data: {
   inviterEmail: string;
   role: string;
   actionLink: string;
+  orgName?: string;
 }) {
+  const safeName = escapeHtml(data.inviteeName);
+  const safeInviter = escapeHtml(data.inviterEmail);
+  const safeRole = escapeHtml(data.role.toUpperCase());
+  const safeOrg = data.orgName ? escapeHtml(data.orgName) : "";
+  const sbgLine = safeOrg ? ` // ${safeOrg.toUpperCase()}` : "";
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><title>Admin Invitation — AWS SBG</title></head>
@@ -24,26 +34,26 @@ function buildAdminInviteEmail(data: {
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 520px; background-color: #FFFFFF; border: 3px solid #000000; box-shadow: 6px 6px 0px #000000; padding: 32px 28px;">
         <tr><td>
           <div style="display: inline-block; background-color: #000000; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; letter-spacing: 2px; padding: 3px 8px; margin-bottom: 16px;">
-            // AWS_SBG // ACCESS_AUTHORIZATION
+            // AWS_SBG // ACCESS_AUTHORIZATION${sbgLine}
           </div>
           <h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 900; text-transform: uppercase; color: #000000; line-height: 1.1;">
             Team Invitation <br>
             <span style="background-color: #7C3AED; color: #FFFFFF; padding: 2px 6px; border: 2px solid #000000; display: inline-block; margin-top: 4px;">
-              ${data.role.toUpperCase()}
+              ${safeRole}
             </span>
           </h1>
         </td></tr>
         <tr><td style="padding: 16px 0 20px 0; color: #27272A; font-size: 14px; line-height: 1.6;">
           <p style="margin: 0 0 12px 0; font-weight: 500;">
-            Hello <strong>${data.inviteeName}</strong>,
+            Hello <strong>${safeName}</strong>,
           </p>
           <p style="margin: 0 0 16px 0; color: #52525B;">
-            You have been granted access to the <strong>AWS Student Builder Group Admin Console</strong> by <strong>${data.inviterEmail}</strong>.
+            You have been granted administrative access to the <strong>AWS Student Builder Group Admin Console</strong>${safeOrg ? ` for <strong>${safeOrg}</strong>` : ""} by <strong>${safeInviter}</strong>.
           </p>
           <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F4F4F5; border: 2px solid #000000; padding: 14px; margin-bottom: 20px; font-family: 'Courier New', Courier, monospace; font-size: 12px;">
-            <tr><td style="padding: 4px 0;"><strong>Assigned Role:</strong> ${data.role}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Assigned Role:</strong> ${safeRole}</td></tr>
+            ${safeOrg ? `<tr><td style="padding: 4px 0;"><strong>Group:</strong> ${safeOrg}</td></tr>` : ""}
             <tr><td style="padding: 4px 0;"><strong>Console URL:</strong> https://admin.awssbg.online</td></tr>
-            <tr><td style="padding: 4px 0;"><strong>Security Level:</strong> Supervised Team Member</td></tr>
           </table>
           <p style="margin: 0 0 16px 0; font-size: 13px; color: #52525B;">
             Click the button below to accept your invitation, verify your credentials, and configure your password.
@@ -66,26 +76,7 @@ function buildAdminInviteEmail(data: {
             ${data.actionLink}
           </p>
         </td></tr>
-        <tr><td style="border-top: 2px dashed #000000; padding-top: 14px; margin-top: 14px;">
-          <p style="margin: 0 0 8px 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; font-weight: 900; color: #000000; text-transform: uppercase;">
-            // OFFICIAL_CHANNELS
-          </p>
-          <table border="0" cellpadding="0" cellspacing="0">
-            <tr>
-              <td>
-                <a href="https://chat.whatsapp.com/CctGVCDhxhA8qcIZzHXpZg?s=cl&p=i&mlu=4&ilr=4" target="_blank" style="display: inline-block; background-color: #25D366; color: #000000; font-family: 'Courier New', Courier, monospace; font-size: 10px; font-weight: 900; padding: 4px 8px; text-decoration: none; border: 1px solid #000000; margin-right: 6px;">
-                  WHATSAPP &rarr;
-                </a>
-              </td>
-              <td>
-                <a href="https://www.instagram.com/awsstudentbuildergroup_tut/" target="_blank" style="display: inline-block; background-color: #E1306C; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 10px; font-weight: 900; padding: 4px 8px; text-decoration: none; border: 1px solid #000000;">
-                  INSTAGRAM &rarr;
-                </a>
-              </td>
-            </tr>
-          </table>
-        </td></tr>
-        <tr><td style="padding-top: 12px;">
+        <tr><td style="padding-top: 14px;">
           <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; color: #71717A;">
             Official student cloud community powered by Amazon Web Services. Zero personal data sale guarantee.
           </p>
@@ -107,7 +98,7 @@ function buildAdminInviteEmail(data: {
 export const onRequest = async (context: { request: Request; env: Env }) => {
   const { request, env } = context;
 
-  // Enable CORS for admin dashboard
+  // CORS options
   if (request.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
@@ -117,6 +108,12 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     });
+  }
+
+  // Enforce rate limiting on write endpoints (POST/DELETE)
+  if (request.method === "POST" || request.method === "DELETE") {
+    const rateLimitError = enforceRateLimit(request, "users_auth", RATE_LIMIT_RULES.AUTH);
+    if (rateLimitError) return rateLimitError;
   }
 
   const supabaseUrl =
@@ -161,53 +158,47 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
     );
   }
 
-  // Superadmin authorization check
-  const isSuperAdmin =
-    (caller as unknown as { is_super_admin?: boolean }).is_super_admin === true ||
-    caller.email === "lethabomabilo33@gmail.com" ||
-    caller.app_metadata?.role === "superadmin";
+  // Query caller profile from public.admin_users
+  const { data: callerProfile } = await supabaseAdmin
+    .from("admin_users")
+    .select("*")
+    .eq("id", caller.id)
+    .single();
 
-  if (!isSuperAdmin) {
+  const isSuperAdmin =
+    callerProfile?.is_super_admin === true ||
+    callerProfile?.role === "superadmin" ||
+    caller.email === "lethabomabilo33@gmail.com";
+
+  const isLeader = callerProfile?.role === "leader";
+
+  // Only Superadmin or Leader can access user management
+  if (!isSuperAdmin && !isLeader) {
     return new Response(
-      JSON.stringify({ error: "Access restricted: Superadmin builder privileges required." }),
+      JSON.stringify({ error: "Access restricted: Group Leader or Superadmin privileges required." }),
       { status: 403, headers: { "Content-Type": "application/json" } }
     );
   }
 
   // ── Handle GET (List Users) ──
   if (request.method === "GET") {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-      page: 1,
-      perPage: 100,
-    });
+    // If Superadmin: list all users; If Leader: list users matching caller's org_id
+    let query = supabaseAdmin.from("admin_users").select("*, orgs(id, name, slug)");
 
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+    if (!isSuperAdmin && callerProfile?.org_id) {
+      query = query.eq("org_id", callerProfile.org_id);
+    }
+
+    const { data: dbUsers, error: dbErr } = await query.order("created_at", { ascending: false });
+
+    if (dbErr) {
+      return new Response(JSON.stringify({ error: dbErr.message }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const sanitizedUsers = data.users.map((u) => {
-      const isSuper =
-        (u as unknown as { is_super_admin?: boolean }).is_super_admin === true ||
-        u.email === "lethabomabilo33@gmail.com";
-      return {
-        id: u.id,
-        email: u.email || "",
-        name:
-          (u.user_metadata?.name as string) ||
-          u.email?.split("@")[0] ||
-          "Admin",
-        role:
-          (u.app_metadata?.role as string) || (isSuper ? "superadmin" : "admin"),
-        is_super_admin: isSuper,
-        created_at: u.created_at,
-        last_sign_in_at: u.last_sign_in_at || null,
-      };
-    });
-
-    return new Response(JSON.stringify({ users: sanitizedUsers }), {
+    return new Response(JSON.stringify({ users: dbUsers || [] }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -220,8 +211,9 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
         email: string;
         name: string;
         role?: string;
+        org_id?: string;
       };
-      const { email, name, role } = body;
+      const { email, name, role, org_id } = body;
 
       if (!email || !email.includes("@")) {
         return new Response(
@@ -232,7 +224,30 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
 
       const targetEmail = email.toLowerCase().trim();
       const targetName = name?.trim() || targetEmail.split("@")[0];
-      const targetRole = role || "admin";
+      
+      // Determine assigned role and org
+      let targetRole = role || "member";
+      let targetOrgId = org_id;
+
+      if (!isSuperAdmin) {
+        // Leaders can only invite Members or Leaders into their own org
+        targetOrgId = callerProfile?.org_id || undefined;
+        if (targetRole === "superadmin") {
+          targetRole = "member";
+        }
+      }
+
+      // Look up target org name for email display
+      let orgName: string | undefined;
+      if (targetOrgId) {
+        const { data: orgData } = await supabaseAdmin
+          .from("orgs")
+          .select("name")
+          .eq("id", targetOrgId)
+          .single();
+        orgName = orgData?.name;
+      }
+
       const redirectUrl = "https://admin.awssbg.online/update-password";
 
       // 1. Generate secure invite verification link from Supabase Auth
@@ -247,13 +262,14 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
             data: {
               name: targetName,
               role: targetRole,
+              org_id: targetOrgId,
             },
             redirectTo: redirectUrl,
           },
         });
 
       if (linkError) {
-        // If user already exists in auth, fallback to generating a recovery or magic link
+        // Fallback for existing auth accounts
         if (
           linkError.message.includes("already been registered") ||
           linkError.message.includes("already exists")
@@ -270,7 +286,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
           if (recoveryError) {
             return new Response(
               JSON.stringify({
-                error: "This user is already part of the team. They can sign in directly or request a password reset.",
+                error: "This user is already registered. They can sign in directly or request a password reset.",
               }),
               { status: 400, headers: { "Content-Type": "application/json" } }
             );
@@ -279,11 +295,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
           actionLink = recoveryData.properties.action_link;
           userId = recoveryData.user.id;
         } else {
-          let friendlyMsg = "Unable to create an invitation link. Please verify the email address and try again.";
-          if (linkError.message.toLowerCase().includes("rate limit")) {
-            friendlyMsg = "Security rate limit reached. Please wait a few minutes before sending another invitation.";
-          }
-          return new Response(JSON.stringify({ error: friendlyMsg }), {
+          return new Response(JSON.stringify({ error: linkError.message }), {
             status: 400,
             headers: { "Content-Type": "application/json" },
           });
@@ -293,41 +305,65 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
         userId = linkData.user.id;
       }
 
-      // 2. Dispatch Invitation Email via verified Resend domain
+      // 2. Insert or update public.admin_users record
+      await supabaseAdmin.from("admin_users").upsert({
+        id: userId,
+        email: targetEmail,
+        name: targetName,
+        role: targetRole,
+        org_id: targetOrgId || null,
+        is_super_admin: targetRole === "superadmin",
+      });
+
+      // 3. Write human-readable audit log
+      await logActivity(supabaseAdmin, {
+        org_id: targetOrgId || null,
+        actor_id: caller.id,
+        actor_name: callerProfile?.name || caller.email || "Admin",
+        action: "user.invited",
+        entity_type: "user",
+        entity_id: userId,
+        summary: `Invited "${targetName}" (${targetEmail}) as ${targetRole.toUpperCase()}${orgName ? ` to ${orgName}` : ""}`,
+      });
+
+      // 4. Dispatch Invitation Email via verified Resend domain
       let emailDispatched = false;
       let emailError: string | null = null;
 
-      try {
-        const resendRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${resendApiKey}`,
-          },
-          body: JSON.stringify({
-            from: "AWS SBG Admin <notifications@awssbg.online>",
-            to: [targetEmail],
-            reply_to: "enquiries@awssbg.online",
-            subject: "Invitation to Join AWS SBG Admin Team",
-            html: buildAdminInviteEmail({
-              inviteeName: targetName,
-              inviterEmail: caller.email || "Lead Administrator",
-              role: targetRole,
-              actionLink,
+      if (resendApiKey) {
+        try {
+          const resendRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${resendApiKey}`,
+            },
+            body: JSON.stringify({
+              from: "AWS SBG Admin <notifications@awssbg.online>",
+              to: [targetEmail],
+              reply_to: "enquiries@awssbg.online",
+              subject: `Invitation to Join AWS SBG Admin Team${orgName ? ` — ${orgName}` : ""}`,
+              html: buildAdminInviteEmail({
+                inviteeName: targetName,
+                inviterEmail: caller.email || "Lead Administrator",
+                role: targetRole,
+                actionLink,
+                orgName,
+              }),
             }),
-          }),
-        });
+          });
 
-        if (resendRes.ok) {
-          emailDispatched = true;
-        } else {
-          const errText = await resendRes.text();
-          emailError = `Resend error (${resendRes.status}): ${errText}`;
-          console.error("Resend invite error:", emailError);
+          if (resendRes.ok) {
+            emailDispatched = true;
+          } else {
+            const errText = await resendRes.text();
+            emailError = `Resend error (${resendRes.status}): ${errText}`;
+            console.error("Resend invite error:", emailError);
+          }
+        } catch (err) {
+          emailError = (err as Error).message;
+          console.error("Failed sending invite email:", emailError);
         }
-      } catch (err) {
-        emailError = (err as Error).message;
-        console.error("Failed sending invite email:", emailError);
       }
 
       return new Response(
@@ -335,7 +371,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
           success: true,
           message: emailDispatched
             ? `Invitation email successfully dispatched to ${targetEmail}`
-            : `User generated, but email delivery issue: ${emailError}`,
+            : `User generated, but email delivery issue: ${emailError || "No API key configured"}`,
           emailDispatched,
           inviteLink: actionLink,
           user: {
@@ -343,6 +379,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
             email: targetEmail,
             name: targetName,
             role: targetRole,
+            org_id: targetOrgId,
           },
         }),
         { status: 201, headers: { "Content-Type": "application/json" } }
@@ -373,13 +410,30 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
       // Prevent self-deletion
       if (userId === caller.id) {
         return new Response(
-          JSON.stringify({ error: "Cannot delete your own superadmin account." }),
+          JSON.stringify({ error: "Cannot delete your own account." }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
 
-      const { error: deleteError } =
-        await supabaseAdmin.auth.admin.deleteUser(userId);
+      // Check target user
+      const { data: targetUser } = await supabaseAdmin
+        .from("admin_users")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (!isSuperAdmin) {
+        // Leaders can only delete members of their own org
+        if (targetUser?.org_id !== callerProfile?.org_id || targetUser?.role === "superadmin") {
+          return new Response(
+            JSON.stringify({ error: "Unauthorized to delete this user." }),
+            { status: 403, headers: { "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Delete from auth.users
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
       if (deleteError) {
         return new Response(JSON.stringify({ error: deleteError.message }), {
@@ -387,6 +441,20 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
           headers: { "Content-Type": "application/json" },
         });
       }
+
+      // Delete from public.admin_users
+      await supabaseAdmin.from("admin_users").delete().eq("id", userId);
+
+      // Audit log
+      await logActivity(supabaseAdmin, {
+        org_id: targetUser?.org_id || null,
+        actor_id: caller.id,
+        actor_name: callerProfile?.name || caller.email || "Admin",
+        action: "user.deleted",
+        entity_type: "user",
+        entity_id: userId,
+        summary: `Removed user "${targetUser?.name || userId}" (${targetUser?.email})`,
+      });
 
       return new Response(
         JSON.stringify({

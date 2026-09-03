@@ -1,4 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
+import { inquirySchema } from "@awssbg/shared/src/schemas";
+import { enforceRateLimit, RATE_LIMIT_RULES } from "@awssbg/shared/src/lib/rateLimit";
+import { sanitizeContent, escapeHtml } from "@awssbg/shared/src/lib/sanitize";
 
 interface Env {
   NEXT_PUBLIC_SUPABASE_URL?: string;
@@ -17,37 +20,44 @@ function buildInquiryAdminEmail(data: {
   category: string;
   message: string;
   timestamp: string;
+  orgName?: string;
 }) {
+  const safeName = escapeHtml(data.name);
+  const safeCategory = escapeHtml(data.category);
+  const safeMessage = escapeHtml(data.message);
+  const safeOrg = data.orgName ? escapeHtml(data.orgName) : "";
+
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>New Inquiry</title></head>
+<head><meta charset="UTF-8"><title>New Student Inquiry — AWS SBG</title></head>
 <body style="margin: 0; padding: 0; background-color: #F4F4F5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
   <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F4F4F5; padding: 40px 15px;">
     <tr><td align="center">
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 520px; background-color: #FFFFFF; border: 3px solid #000000; box-shadow: 6px 6px 0px #000000; padding: 32px 28px;">
         <tr><td>
           <div style="display: inline-block; background-color: #000000; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; letter-spacing: 2px; padding: 3px 8px; margin-bottom: 16px;">
-            // AWS_SBG // CONTACT_DISPATCH
+            // AWS_SBG // CONTACT_DISPATCH${safeOrg ? ` // ${safeOrg.toUpperCase()}` : ""}
           </div>
           <h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 900; text-transform: uppercase; color: #000000; line-height: 1.1;">
             New Student Inquiry <br>
             <span style="background-color: #7C3AED; color: #FFFFFF; padding: 2px 6px; border: 2px solid #000000; display: inline-block; margin-top: 4px;">
-              ${data.category}
+              ${safeCategory}
             </span>
           </h1>
         </td></tr>
         <tr><td style="padding: 16px 0 20px 0;">
           <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F4F4F5; border: 2px solid #000000; padding: 14px; font-family: 'Courier New', Courier, monospace; font-size: 12px;">
-            <tr><td style="padding: 4px 0;"><strong>Submitter:</strong> ${data.name}</td></tr>
-            <tr><td style="padding: 4px 0;"><strong>Email:</strong> <a href="mailto:${data.email}" style="color: #7C3AED; font-weight: bold;">${data.email}</a></td></tr>
-            <tr><td style="padding: 4px 0;"><strong>Category:</strong> ${data.category}</td></tr>
-            <tr><td style="padding: 4px 0;"><strong>Timestamp:</strong> ${data.timestamp}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Submitter:</strong> ${safeName}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Email:</strong> <a href="mailto:${escapeHtml(data.email)}" style="color: #7C3AED; font-weight: bold;">${escapeHtml(data.email)}</a></td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Category:</strong> ${safeCategory}</td></tr>
+            ${safeOrg ? `<tr><td style="padding: 4px 0;"><strong>Group:</strong> ${safeOrg}</td></tr>` : ""}
+            <tr><td style="padding: 4px 0;"><strong>Timestamp:</strong> ${escapeHtml(data.timestamp)}</td></tr>
           </table>
           <div style="margin-top: 16px;">
             <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; text-transform: uppercase; color: #52525B; margin-bottom: 6px;">
               // MESSAGE_CONTENT
             </div>
-            <div style="background-color: #FFFFFF; border: 2px solid #000000; padding: 14px; font-size: 14px; line-height: 1.6; color: #000000; white-space: pre-wrap;">${data.message}</div>
+            <div style="background-color: #FFFFFF; border: 2px solid #000000; padding: 14px; font-size: 14px; line-height: 1.6; color: #000000; white-space: pre-wrap;">${safeMessage}</div>
           </div>
         </td></tr>
         <tr><td align="center" style="padding-bottom: 24px;">
@@ -68,7 +78,7 @@ function buildInquiryAdminEmail(data: {
         </td></tr>
         <tr><td style="border-top: 2px dashed #000000; padding-top: 14px;">
           <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; color: #71717A;">
-            Dispatched to enquiries@awssbg.online &amp; lethabomabilo33@gmail.com.
+            Dispatched securely via verified AWS SBG mail servers.
           </p>
         </td></tr>
       </table>
@@ -84,6 +94,9 @@ function buildInquiryAdminEmail(data: {
 }
 
 function buildInquiryUserConfirmation(data: { name: string; category: string }) {
+  const safeName = escapeHtml(data.name);
+  const safeCategory = escapeHtml(data.category);
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><title>We Received Your Message</title></head>
@@ -98,13 +111,13 @@ function buildInquiryUserConfirmation(data: { name: string; category: string }) 
           <h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 900; text-transform: uppercase; color: #000000; line-height: 1.1;">
             We Got Your Message, <br>
             <span style="background-color: #2563EB; color: #FFFFFF; padding: 2px 6px; border: 2px solid #000000; display: inline-block; margin-top: 4px;">
-              ${data.name}
+              ${safeName}
             </span>
           </h1>
         </td></tr>
         <tr><td style="padding: 16px 0 20px 0; color: #27272A; font-size: 14px; line-height: 1.6;">
           <p style="margin: 0 0 12px 0; font-weight: 500;">
-            Thank you for contacting the <strong>AWS Student Builder Group (AWS SBG)</strong>. We have logged your message regarding <strong>${data.category}</strong>.
+            Thank you for contacting the <strong>AWS Student Builder Group (AWS SBG)</strong>. We have logged your message regarding <strong>${safeCategory}</strong>.
           </p>
           <p style="margin: 0 0 16px 0; color: #52525B;">
             Our student leadership team reviews incoming inquiries and will follow up with you directly.
@@ -134,17 +147,24 @@ function buildInquiryUserConfirmation(data: { name: string; category: string }) 
         </td></tr>
         <tr><td align="center" style="padding-bottom: 24px;">
           <table border="0" cellpadding="0" cellspacing="0" width="100%">
-            <tr><td align="center">
-              <a href="https://awssbg.online" target="_blank" style="display: block; background-color: #000000; color: #FFFFFF; border: 2px solid #000000; box-shadow: 4px 4px 0px #7C3AED; font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; padding: 12px 20px; text-align: center;">
-                EXPLORE AWS SBG HUB &rarr;
-              </a>
-            </td></tr>
+            <tr>
+              <td align="center">
+                <a href="https://awssbg.online" target="_blank" style="display: block; background-color: #000000; color: #FFFFFF; border: 2px solid #000000; box-shadow: 4px 4px 0px #7C3AED; font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; padding: 12px 20px; text-align: center;">
+                  EXPLORE AWS SBG HUB &rarr;
+                </a>
+              </td>
+            </tr>
           </table>
         </td></tr>
         <tr><td style="border-top: 2px dashed #000000; padding-top: 14px;">
           <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; color: #71717A;">
             Official student cloud community powered by Amazon Web Services. Zero personal data sale guarantee.
           </p>
+        </td></tr>
+      </table>
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 500px; margin-top: 20px;">
+        <tr><td align="center" style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 700; color: #71717A;">
+          &copy; AWS STUDENT BUILDER GROUP &bull; &ldquo;GO BUILD.&rdquo;
         </td></tr>
       </table>
     </td></tr>
@@ -200,30 +220,37 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
     });
   }
 
+  // 1. Enforce Edge Rate Limiting (Cybersecurity Hardening: Max 5 per 10 min)
+  const rateLimitError = enforceRateLimit(request, "inquiries", RATE_LIMIT_RULES.INQUIRIES);
+  if (rateLimitError) {
+    return rateLimitError;
+  }
+
   try {
-    const body = (await request.json()) as {
-      name?: string;
-      email?: string;
-      category?: string;
-      message?: string;
-    };
+    const rawBody = await request.json();
 
-    const { name, email, category, message } = body;
-
-    if (!name || !email || !message) {
+    // 2. Enforce Strict Zod Schema Validation
+    const validation = inquirySchema.safeParse(rawBody);
+    if (!validation.success) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: name, email, message." }),
+        JSON.stringify({
+          error: "Validation failed.",
+          details: validation.error.flatten().fieldErrors,
+        }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    const cleanName = name.trim();
-    const cleanEmail = email.trim();
-    const cleanCategory = (category || "General Inquiry").trim();
-    const cleanMessage = message.trim();
+    const { name, email, category, message, org_id } = validation.data;
+
+    // 3. Stored XSS Prevention / Sanitization
+    const cleanName = sanitizeContent(name);
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanCategory = sanitizeContent(category);
+    const cleanMessage = sanitizeContent(message);
     const timestamp = new Date().toUTCString();
 
-    // 1. Persist to Supabase inquiries table
+    // 4. Persist to Supabase inquiries table
     const supabaseUrl =
       env.NEXT_PUBLIC_SUPABASE_URL || "https://yzmgkreucvbftolijtpl.supabase.co";
     const supabaseKey =
@@ -233,10 +260,22 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Resolve target organization id if not provided
+    let targetOrgId = org_id;
+    if (!targetOrgId) {
+      const { data: tutOrg } = await supabase
+        .from("orgs")
+        .select("id")
+        .eq("slug", "tut")
+        .single();
+      targetOrgId = tutOrg?.id;
+    }
+
     let savedId: string | undefined;
     const { data: dbData, error: dbError } = await supabase
       .from("inquiries")
       .insert({
+        org_id: targetOrgId,
         name: cleanName,
         email: cleanEmail,
         category: cleanCategory,
@@ -252,10 +291,21 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
       savedId = dbData?.id;
     }
 
-    // 2. Dispatch Formatted Emails via Resend
-    const resendKey = env.RESEND_API_KEY;
+    // 5. Look up organization recipient email from org_settings
+    let adminRecipientEmail = env.ADMIN_NOTIFICATION_EMAIL || "lethabomabilo33@gmail.com";
+    if (targetOrgId) {
+      const { data: settings } = await supabase
+        .from("org_settings")
+        .select("contact_recipient_email")
+        .eq("org_id", targetOrgId)
+        .single();
+      if (settings?.contact_recipient_email) {
+        adminRecipientEmail = settings.contact_recipient_email;
+      }
+    }
 
-    const adminEmail = env.ADMIN_NOTIFICATION_EMAIL || "lethabomabilo33@gmail.com";
+    // 6. Dispatch Formatted Emails via Resend
+    const resendKey = env.RESEND_API_KEY;
     const enquiriesEmail = env.ENQUIRIES_EMAIL || "enquiries@awssbg.online";
 
     const emailResults: { admin?: any; student?: any; errors?: string[] } = {};
@@ -266,7 +316,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
       try {
         emailResults.admin = await sendViaResend(resendKey, {
           from: "AWS SBG Inquiries <enquiries@awssbg.online>",
-          to: [adminEmail, enquiriesEmail],
+          to: [adminRecipientEmail, enquiriesEmail],
           reply_to: cleanEmail,
           subject: `[AWS SBG Inquiry] ${cleanCategory} from ${cleanName}`,
           html: buildInquiryAdminEmail({

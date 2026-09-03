@@ -10,7 +10,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { supabase, LinkItem, InquiryItem, getIconForPlatform } from "@awssbg/shared";
+import { supabase, LinkItem, InquiryItem, Organization, getIconForPlatform, logActivity } from "@awssbg/shared";
+import { BlogManager } from "../components/BlogManager";
+import { TeamPageManager } from "../components/TeamPageManager";
+import { OrgSettingsView } from "../components/OrgSettingsView";
+import { ActivityLogView } from "../components/ActivityLogView";
 import {
   HiOutlineTrash,
   HiOutlinePencilSquare,
@@ -33,6 +37,11 @@ import {
   HiOutlineBars3,
   HiOutlineEye,
   HiOutlineSparkles,
+  HiOutlineDocumentText,
+  HiOutlineUsers,
+  HiOutlineCog6Tooth,
+  HiOutlineClock,
+  HiOutlineBuildingOffice2,
 } from "react-icons/hi2";
 
 const PLATFORMS = [
@@ -513,16 +522,21 @@ function LinkEditor({
 // ── Superadmin User Invite Modal ──
 function InviteUserModal({
   token,
+  orgs = [],
+  defaultOrgId,
   onClose,
   onUserInvited,
 }: {
   token: string;
+  orgs?: Organization[];
+  defaultOrgId?: string;
   onClose: () => void;
   onUserInvited: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState("admin");
+  const [role, setRole] = useState("member");
+  const [orgId, setOrgId] = useState(defaultOrgId || orgs[0]?.id || "");
   const [loading, setLoading] = useState(false);
 
   async function handleInvite(e: React.FormEvent) {
@@ -544,6 +558,7 @@ function InviteUserModal({
           email: email.trim(),
           name: name.trim() || email.split("@")[0],
           role,
+          org_id: orgId || undefined,
         }),
       });
 
@@ -586,7 +601,7 @@ function InviteUserModal({
       >
         <div className="border-b-2 border-black pb-3">
           <div className="mb-1 inline-block border border-black bg-accent-purple px-2 py-0.2 font-mono text-[9px] font-black text-white">
-            // SUPERADMIN_ACCESS
+            // ACCESS_AUTHORIZATION
           </div>
           <h2 className="text-xl font-black uppercase tracking-tight text-black">
             Invite Team Member
@@ -623,6 +638,25 @@ function InviteUserModal({
           />
         </div>
 
+        {orgs.length > 0 && (
+          <div>
+            <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+              Assigned Group
+            </label>
+            <select
+              value={orgId}
+              onChange={(e) => setOrgId(e.target.value)}
+              className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED] cursor-pointer"
+            >
+              {orgs.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
             Access Role
@@ -632,8 +666,9 @@ function InviteUserModal({
             onChange={(e) => setRole(e.target.value)}
             className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED] cursor-pointer"
           >
-            <option value="admin">ADMIN (Manage Links, Content & Inquiries)</option>
-            <option value="editor">EDITOR (View & Edit Links)</option>
+            <option value="member">MEMBER (Manage Links, Posts, Team Bios)</option>
+            <option value="leader">GROUP LEADER (Manage Group Settings &amp; Members)</option>
+            <option value="superadmin">SUPERADMIN (Global Management)</option>
           </select>
         </div>
 
@@ -1070,10 +1105,19 @@ function Dashboard() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Multi-tenant Groups & Role State
+  const [orgs, setOrgs] = useState<Organization[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
+  const [currentUserRole, setCurrentUserRole] = useState<string>("member");
+  const [currentUserName, setCurrentUserName] = useState<string>("");
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
   // Sidebar & View state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeView, setActiveView] = useState<"dashboard" | "analytics" | "links" | "inquiries" | "team">("dashboard");
+  const [activeView, setActiveView] = useState<
+    "dashboard" | "analytics" | "links" | "posts" | "team_page" | "settings" | "activity" | "inquiries" | "team"
+  >("dashboard");
 
   // Modals state
   const [editing, setEditing] = useState<Partial<LinkItem> | null>(null);
@@ -1092,11 +1136,12 @@ function Dashboard() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [sessionToken, setSessionToken] = useState<string>("");
 
-  const fetchLinks = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("links")
-      .select("*")
-      .order("sort_order", { ascending: true });
+  const fetchLinks = useCallback(async (orgId?: string) => {
+    let query = supabase.from("links").select("*");
+    if (orgId && orgId !== "all") {
+      query = query.eq("org_id", orgId);
+    }
+    const { data, error } = await query.order("sort_order", { ascending: true });
 
     if (error) {
       toast.error("Failed to load links", { description: formatUserError(error, "Please refresh the page to try again.") });
@@ -1105,11 +1150,12 @@ function Dashboard() {
     }
   }, []);
 
-  const fetchInquiries = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("inquiries")
-      .select("*")
-      .order("created_at", { ascending: false });
+  const fetchInquiries = useCallback(async (orgId?: string) => {
+    let query = supabase.from("inquiries").select("*");
+    if (orgId && orgId !== "all") {
+      query = query.eq("org_id", orgId);
+    }
+    const { data } = await query.order("created_at", { ascending: false });
 
     if (data) {
       setInquiries(data as InquiryItem[]);
@@ -1130,23 +1176,53 @@ function Dashboard() {
     }
   }, []);
 
+  // Fetch Orgs & User Profile
+  const loadUserAndOrgs = useCallback(
+    async (session: any) => {
+      const email = session.user.email || "";
+      setCurrentUserEmail(email);
+      setCurrentUserId(session.user.id);
+      setSessionToken(session.access_token);
+
+      // Fetch orgs
+      const { data: orgsData } = await supabase.from("orgs").select("*").order("name", { ascending: true });
+      const loadedOrgs = (orgsData as Organization[]) || [];
+      setOrgs(loadedOrgs);
+
+      // Fetch admin user record
+      const { data: profile } = await supabase.from("admin_users").select("*").eq("id", session.user.id).single();
+
+      const isSuper =
+        profile?.is_super_admin === true ||
+        profile?.role === "superadmin" ||
+        email === "lethabomabilo33@gmail.com";
+
+      setIsSuperAdmin(isSuper);
+      setCurrentUserRole(profile?.role || (isSuper ? "superadmin" : "member"));
+      setCurrentUserName(profile?.name || email.split("@")[0] || "Admin");
+
+      // Initial active group: TUT or assigned org
+      let initialOrg = profile?.org_id;
+      if (!initialOrg || isSuper) {
+        const tutOrg = loadedOrgs.find((o) => o.slug === "tut");
+        initialOrg = tutOrg?.id || loadedOrgs[0]?.id || "";
+      }
+
+      setSelectedOrgId(initialOrg);
+      fetchLinks(initialOrg);
+      fetchInquiries(initialOrg);
+
+      if (isSuper || profile?.role === "leader") {
+        fetchUsers(session.access_token);
+      }
+    },
+    [fetchLinks, fetchInquiries, fetchUsers]
+  );
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        const email = session.user.email || "";
-        setCurrentUserEmail(email);
-        setSessionToken(session.access_token);
-
-        const isSuper =
-          (session.user as unknown as { is_super_admin?: boolean }).is_super_admin === true ||
-          email === "lethabomabilo33@gmail.com";
-        setIsSuperAdmin(isSuper);
-
-        fetchLinks();
-        fetchInquiries();
-        if (isSuper) {
-          fetchUsers(session.access_token);
-        }
+        loadUserAndOrgs(session);
       }
       setLoading(false);
     });
@@ -1155,20 +1231,7 @@ function Dashboard() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        const email = session.user.email || "";
-        setCurrentUserEmail(email);
-        setSessionToken(session.access_token);
-
-        const isSuper =
-          (session.user as unknown as { is_super_admin?: boolean }).is_super_admin === true ||
-          email === "lethabomabilo33@gmail.com";
-        setIsSuperAdmin(isSuper);
-
-        fetchLinks();
-        fetchInquiries();
-        if (isSuper) {
-          fetchUsers(session.access_token);
-        }
+        loadUserAndOrgs(session);
       } else {
         setCurrentUserEmail("");
         setSessionToken("");
@@ -1177,7 +1240,15 @@ function Dashboard() {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchLinks, fetchInquiries, fetchUsers]);
+  }, [loadUserAndOrgs]);
+
+  // Re-fetch links and inquiries when group selection switches
+  useEffect(() => {
+    if (selectedOrgId) {
+      fetchLinks(selectedOrgId);
+      fetchInquiries(selectedOrgId);
+    }
+  }, [selectedOrgId, fetchLinks, fetchInquiries]);
 
   // Total link click traffic
   const totalClicks = useMemo(() => {
@@ -1201,6 +1272,7 @@ function Dashboard() {
   }, [inquiries, inquiryCategoryFilter, inquiryStatusFilter]);
 
   async function handleSaveLink(data: Partial<LinkItem>) {
+    const targetOrgId = selectedOrgId || undefined;
     if (data.id) {
       const { id, ...rest } = data;
       const { error } = await supabase.from("links").update(rest).eq("id", id);
@@ -1208,19 +1280,39 @@ function Dashboard() {
         toast.error("Failed to update link", { description: formatUserError(error, "Please check your inputs and try again.") });
       } else {
         toast.success("Link updated successfully!");
-        fetchLinks();
+        await logActivity(supabase, {
+          org_id: targetOrgId || null,
+          actor_id: currentUserId,
+          actor_name: currentUserName || currentUserEmail,
+          action: "link.updated",
+          entity_type: "link",
+          entity_id: id,
+          summary: `Updated link card "${data.title}"`,
+        });
+        fetchLinks(selectedOrgId);
       }
     } else {
       const maxOrder = links.length > 0 ? Math.max(...links.map((l) => l.sort_order)) : 0;
-      const { error } = await supabase
+      const { data: newLink, error } = await supabase
         .from("links")
-        .insert({ ...data, sort_order: maxOrder + 1, click_count: 0 });
+        .insert({ ...data, org_id: targetOrgId, sort_order: maxOrder + 1, click_count: 0 })
+        .select("id")
+        .single();
 
       if (error) {
         toast.error("Failed to create link", { description: formatUserError(error, "Please check your inputs and try again.") });
       } else {
         toast.success("Link created successfully!");
-        fetchLinks();
+        await logActivity(supabase, {
+          org_id: targetOrgId || null,
+          actor_id: currentUserId,
+          actor_name: currentUserName || currentUserEmail,
+          action: "link.created",
+          entity_type: "link",
+          entity_id: newLink?.id,
+          summary: `Created link card "${data.title}"`,
+        });
+        fetchLinks(selectedOrgId);
       }
     }
     setEditing(null);
@@ -1235,7 +1327,16 @@ function Dashboard() {
       toast.error("Failed to delete link", { description: formatUserError(error, "Unable to delete link at this time.") });
     } else {
       toast.success("Link deleted");
-      fetchLinks();
+      await logActivity(supabase, {
+        org_id: selectedOrgId || null,
+        actor_id: currentUserId,
+        actor_name: currentUserName || currentUserEmail,
+        action: "link.deleted",
+        entity_type: "link",
+        entity_id: id,
+        summary: `Deleted link card "${title}"`,
+      });
+      fetchLinks(selectedOrgId);
     }
   }
 
@@ -1342,10 +1443,14 @@ function Dashboard() {
 
   const NAV_ITEMS = [
     { id: "dashboard", label: "Dashboard", icon: HiOutlineSquares2X2 },
-    { id: "analytics", label: "Analytics", icon: HiOutlineChartBar },
     { id: "links", label: `Links (${links.length})`, icon: HiOutlineLink },
+    { id: "posts", label: "Blog Posts", icon: HiOutlineDocumentText },
+    { id: "team_page", label: "Meet the Team", icon: HiOutlineUsers },
     { id: "inquiries", label: "Inquiries", badge: unreadInquiriesCount, icon: HiOutlineEnvelope },
-    { id: "team", label: "Settings & Team", icon: HiOutlineUserGroup },
+    { id: "analytics", label: "Analytics", icon: HiOutlineChartBar },
+    { id: "settings", label: "Group Settings", icon: HiOutlineCog6Tooth },
+    { id: "activity", label: "Activity Log", icon: HiOutlineClock },
+    { id: "team", label: "Users & Roles", icon: HiOutlineUserGroup },
   ] as const;
 
   return (
@@ -1395,6 +1500,42 @@ function Dashboard() {
               >
                 <HiOutlineChevronRight className="h-3.5 w-3.5" />
               </button>
+            </div>
+          )}
+
+          {/* Neo-Brutalist Group Switcher */}
+          {!sidebarCollapsed && orgs.length > 0 && (
+            <div className="border-b-[3px] border-black bg-zinc-50 p-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono text-[9px] font-black uppercase text-zinc-500">
+                  Active SBG:
+                </span>
+                {!isSuperAdmin && (
+                  <span className="flex items-center gap-0.5 font-mono text-[8px] font-bold text-zinc-500 uppercase">
+                    Locked
+                  </span>
+                )}
+              </div>
+              {isSuperAdmin ? (
+                <select
+                  value={selectedOrgId}
+                  onChange={(e) => setSelectedOrgId(e.target.value)}
+                  className="w-full border-2 border-black bg-white px-2 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-600"
+                >
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="flex items-center gap-1.5 border-2 border-black bg-white px-2.5 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000]">
+                  <HiOutlineBuildingOffice2 className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                  <span className="truncate">
+                    {orgs.find((o) => o.id === selectedOrgId)?.name || "Assigned Group"}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -1512,6 +1653,30 @@ function Dashboard() {
         {/* Mobile Drawer */}
         {mobileMenuOpen && (
           <div className="md:hidden border-b-[3px] border-black bg-white p-4 space-y-2 shadow-[0px_6px_0px_#000000]">
+            {orgs.length > 0 && (
+              <div className="mb-2 border-2 border-black bg-zinc-50 p-2">
+                <span className="block font-mono text-[9px] font-black uppercase text-zinc-500 mb-1">
+                  Active SBG:
+                </span>
+                {isSuperAdmin ? (
+                  <select
+                    value={selectedOrgId}
+                    onChange={(e) => setSelectedOrgId(e.target.value)}
+                    className="w-full border-2 border-black bg-white px-2 py-1 font-mono text-xs font-bold text-black"
+                  >
+                    {orgs.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="font-mono text-xs font-bold text-black">
+                    {orgs.find((o) => o.id === selectedOrgId)?.name || "Assigned Group"}
+                  </span>
+                )}
+              </div>
+            )}
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = activeView === item.id;
@@ -1966,7 +2131,7 @@ function Dashboard() {
                     </p>
                   </div>
                   <button
-                    onClick={fetchInquiries}
+                    onClick={() => fetchInquiries(selectedOrgId)}
                     className="border-2 border-black bg-white px-3 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
                   >
                     Refresh List
@@ -2133,6 +2298,53 @@ function Dashboard() {
               </div>
             </div>
           )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW: BLOG POSTS */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "posts" && (
+            <BlogManager
+              currentOrgId={selectedOrgId}
+              actorId={currentUserId}
+              actorName={currentUserName || currentUserEmail}
+              isSuperAdmin={isSuperAdmin}
+            />
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW: MEET THE TEAM */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "team_page" && (
+            <TeamPageManager
+              currentOrgId={selectedOrgId}
+              actorId={currentUserId}
+              actorName={currentUserName || currentUserEmail}
+              isSuperAdmin={isSuperAdmin}
+            />
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW: GROUP SETTINGS */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "settings" && (
+            <OrgSettingsView
+              currentOrgId={selectedOrgId}
+              actorId={currentUserId}
+              actorName={currentUserName || currentUserEmail}
+              isSuperAdmin={isSuperAdmin}
+              userRole={currentUserRole}
+            />
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW: ACTIVITY LOG */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "activity" && (
+            <ActivityLogView
+              currentOrgId={selectedOrgId}
+              isSuperAdmin={isSuperAdmin}
+            />
+          )}
         </main>
       </div>
 
@@ -2148,9 +2360,11 @@ function Dashboard() {
         />
       )}
 
-      {showInviteModal && isSuperAdmin && (
+      {showInviteModal && (isSuperAdmin || currentUserRole === "leader") && (
         <InviteUserModal
           token={sessionToken}
+          orgs={orgs}
+          defaultOrgId={selectedOrgId}
           onClose={() => setShowInviteModal(false)}
           onUserInvited={() => fetchUsers(sessionToken)}
         />

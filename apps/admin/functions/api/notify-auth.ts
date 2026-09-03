@@ -1,3 +1,6 @@
+import { enforceRateLimit, RATE_LIMIT_RULES } from "@awssbg/shared/src/lib/rateLimit";
+import { escapeHtml } from "@awssbg/shared/src/lib/sanitize";
+
 interface Env {
   RESEND_API_KEY?: string;
   ADMIN_NOTIFICATION_EMAIL?: string;
@@ -25,8 +28,12 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
     });
   }
 
+  // Rate limiting to prevent email spam / quota exhaustion
+  const rateLimitError = enforceRateLimit(request, "notify_auth", RATE_LIMIT_RULES.AUTH);
+  if (rateLimitError) return rateLimitError;
+
   try {
-    const body = await request.json() as {
+    const body = (await request.json()) as {
       type: "login" | "password_changed";
       email: string;
     };
@@ -47,9 +54,13 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
       });
     }
 
-    const clientIp = request.headers.get("cf-connecting-ip") || "Unknown IP";
-    const clientUa = request.headers.get("user-agent") || "Unknown Browser";
+    const rawIp = request.headers.get("cf-connecting-ip") || "Unknown IP";
+    const rawUa = request.headers.get("user-agent") || "Unknown Browser";
     const timestamp = new Date().toUTCString();
+
+    const safeEmail = escapeHtml(email);
+    const safeIp = escapeHtml(rawIp);
+    const safeUa = escapeHtml(rawUa);
 
     const isLogin = type === "login";
     const title = isLogin ? "New Admin Sign-In" : "Password Changed";
@@ -76,12 +87,12 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
         </td></tr>
         <tr><td style="padding: 16px 0 20px 0; color: #27272A; font-size: 14px; line-height: 1.6;">
           <p style="margin: 0 0 12px 0; font-weight: 500;">
-            ${isLogin ? `A new administrator session was established for <strong>${email}</strong> on awssbg Admin.` : `The password for <strong>${email}</strong> was successfully updated.`}
+            ${isLogin ? `A new administrator session was established for <strong>${safeEmail}</strong> on awssbg Admin.` : `The password for <strong>${safeEmail}</strong> was successfully updated.`}
           </p>
           <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F4F4F5; border: 2px solid #000000; padding: 12px; margin: 16px 0; font-family: 'Courier New', Courier, monospace; font-size: 12px;">
             <tr><td style="padding: 4px 0;"><strong>Timestamp:</strong> ${timestamp}</td></tr>
-            <tr><td style="padding: 4px 0;"><strong>IP Address:</strong> ${clientIp}</td></tr>
-            <tr><td style="padding: 4px 0;"><strong>Client:</strong> ${clientUa}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>IP Address:</strong> ${safeIp}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Client:</strong> ${safeUa}</td></tr>
           </table>
         </td></tr>
         <tr><td align="center" style="padding-bottom: 24px;">
@@ -106,7 +117,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
       </table>
     </td></tr>
   </table>
-</body>
+ </body>
 </html>`;
 
     await fetch("https://api.resend.com/emails", {

@@ -158,7 +158,7 @@ const jsonLd = {
           "name": "How do students get AWS certification exam vouchers?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Certification vouchers come through AWS Builder Center's Student Rewards program, not through this chapter directly. Verify your student status on AWS Builder Center to unlock up to $579 in resources — including AWS credits, 12 months of premium Skill Builder access, and a certification exam voucher. Attending our Study Jams and labs is the best way to prep for the exam once you're verified.",
+            "text": "Certification vouchers come through AWS Builder Center's Student Rewards program, not through our student group directly. Verify your student status on AWS Builder Center to unlock up to $579 in resources — including AWS credits, 12 months of premium Skill Builder access, and a certification exam voucher. Attending our Study Jams and labs is the best way to prep for the exam once you're verified.",
           },
         },
       ],

@@ -1,18 +1,17 @@
 "use client";
 
-/**
- * Landing Page — AWS Student Builder Group
- * Public AWS SBG site layout (Zero admin code).
- */
-
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { supabase } from "@awssbg/shared";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import LinkList from "@/components/LinkList";
 import Footer from "@/components/Footer";
 
-export default function Home() {
+export default function OrgHomeClient() {
+  const params = useParams();
+  const orgSlug = (params?.org as string) || "tut";
+
   const [settings, setSettings] = useState<{
     hero_title?: string;
     hero_subtitle?: string;
@@ -24,7 +23,7 @@ export default function Home() {
       const { data: orgData } = await supabase
         .from("orgs")
         .select("id")
-        .eq("slug", "tut")
+        .eq("slug", orgSlug)
         .single();
 
       if (orgData?.id) {
@@ -37,19 +36,19 @@ export default function Home() {
       }
     }
     loadSettings();
-  }, []);
+  }, [orgSlug]);
 
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
       <Header />
       <Hero
-        orgSlug="tut"
+        orgSlug={orgSlug}
         title={settings?.hero_title}
         subtitle={settings?.hero_subtitle}
         logoUrl={settings?.hero_image_url}
       />
       <main className="flex-1 pb-10">
-        <LinkList orgSlug="tut" />
+        <LinkList orgSlug={orgSlug} />
       </main>
       <Footer />
     </div>

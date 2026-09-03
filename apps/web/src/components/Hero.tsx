@@ -12,40 +12,54 @@ import {
   HiOutlineCube,
 } from "react-icons/hi2";
 
-export default function Hero() {
+interface HeroProps {
+  orgSlug?: string;
+  title?: string;
+  subtitle?: string;
+  logoUrl?: string | null;
+}
+
+export default function Hero({ orgSlug = "tut", title, subtitle, logoUrl }: HeroProps) {
   return (
     <section className="relative w-full overflow-hidden pt-6 sm:pt-9 pb-3">
       <div className="relative z-10 mx-auto max-w-[500px] px-4 sm:px-5 text-center">
         {/* Featured AWS SBG Chip Logo Mark (0px Boxed Stamp) */}
         <div className="animate-hero animate-hero-delay-1 mx-auto mb-3 sm:mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center border-[3px] border-black bg-white p-1.5 sm:p-2 shadow-[3px_3px_0px_#000000] sm:shadow-[4px_4px_0px_#000000]">
           <Image
-            src="/logo.png"
+            src={logoUrl || "/logo.png"}
             alt="AWS Student Builder Group Logo"
             width={64}
             height={64}
             className="h-full w-full object-contain"
             priority
+            unoptimized={!!logoUrl}
           />
         </div>
 
         {/* Monospace Eyebrow Stamp */}
         <div className="animate-hero animate-hero-delay-1 mb-3 inline-flex items-center gap-1.5 sm:gap-2 border-2 border-black bg-black px-2.5 py-0.5 sm:px-3 sm:py-1 text-white shadow-[2px_2px_0px_#7C3AED]">
           <span className="font-mono text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-white">
-            // AWS_STUDENT_BUILDER_GROUP
+            // AWS_STUDENT_BUILDER_GROUP{orgSlug ? ` // ${orgSlug.toUpperCase()}` : ""}
           </span>
         </div>
 
         {/* Main Headline (Brutalist Punch) */}
         <h1 className="animate-hero animate-hero-delay-2 mb-3 text-[26px] sm:text-[34px] font-black uppercase leading-[1.1] tracking-tight text-black">
-          Build, Certify &amp; Connect <br className="hidden sm:inline" />
-          <span className="mt-1 inline-block border-2 border-black bg-accent-purple px-2 py-0.5 sm:px-2.5 text-white shadow-[3px_3px_0px_#000000]">
-            In The Cloud
-          </span>
+          {title ? (
+            title
+          ) : (
+            <>
+              Build, Certify &amp; Connect <br className="hidden sm:inline" />
+              <span className="mt-1 inline-block border-2 border-black bg-accent-purple px-2 py-0.5 sm:px-2.5 text-white shadow-[3px_3px_0px_#000000]">
+                In The Cloud
+              </span>
+            </>
+          )}
         </h1>
 
         {/* Subtext */}
         <p className="animate-hero animate-hero-delay-3 mx-auto max-w-[440px] text-[13px] sm:text-[14px] font-medium leading-relaxed text-zinc-800">
-          A student-led cloud computing community, supported by AWS, active in 60+ countries. Hands-on AWS Study Jams, certification prep, and real-world projects.
+          {subtitle || "A student-led cloud computing community, supported by AWS, active in 60+ countries. Hands-on AWS Study Jams, certification prep, and real-world projects."}
         </p>
 
         {/* Core Pillars (0px Sharp Brutalist Chips) */}

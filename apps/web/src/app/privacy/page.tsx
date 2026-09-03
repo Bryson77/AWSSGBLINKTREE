@@ -23,7 +23,7 @@ export default function PrivacyPage() {
               className="inline-flex items-center gap-1.5 border-2 border-black bg-white px-3 py-1 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-black hover:text-white"
             >
               <HiArrowLeft className="h-3.5 w-3.5" />
-              <span>&larr; Return to Links</span>
+              <span>Return to Home</span>
             </Link>
           </div>
 

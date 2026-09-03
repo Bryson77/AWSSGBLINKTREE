@@ -1,3 +1,6 @@
+"use client";
+
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -12,13 +15,6 @@ import {
   HiOutlineQuestionMarkCircle,
   HiArrowUpRight,
 } from "react-icons/hi2";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "About Us — AWS Student Builder Group",
-  description:
-    "Learn about AWS Student Builder Group (AWS SBG) — the official global student cloud community powered by Amazon Web Services (AWS) across 60+ countries.",
-};
 
 const PILLARS = [
   {
@@ -66,42 +62,41 @@ const FAQS = [
   },
 ];
 
-export default function AboutPage() {
+export default function OrgAboutClient() {
+  const params = useParams();
+  const orgSlug = (params?.org as string) || "tut";
+
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
       <Header />
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="mx-auto max-w-[680px]">
-          {/* Back button */}
           <div className="mb-6">
             <Link
-              href="/"
+              href={`/${orgSlug}`}
               className="inline-flex items-center gap-1.5 border-2 border-black bg-white px-3 py-1 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-black hover:text-white transition-all"
             >
               <HiArrowLeft className="h-3.5 w-3.5" />
-              <span>Return to Home</span>
+              <span>Return to AWS SBG Hub</span>
             </Link>
           </div>
 
-          {/* Main Card */}
           <div className="border-[3px] border-black bg-white p-6 sm:p-9 shadow-[6px_6px_0px_#000000]">
-            {/* Header Stamp */}
             <div className="mb-6 border-b-2 border-black pb-5">
               <div className="mb-2 inline-flex items-center gap-1.5 border-2 border-black bg-black px-2.5 py-0.5 text-white shadow-[2px_2px_0px_#7C3AED]">
                 <span className="font-mono text-[10px] font-black uppercase tracking-widest text-white">
-                  // ABOUT_US // GLOBAL_STUDENT_COMMUNITY
+                  // ABOUT_US // {orgSlug.toUpperCase()}
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black">
-                About AWS Student Builder Group
+                About AWS SBG @{orgSlug.toUpperCase()}
               </h1>
               <p className="mt-1 font-mono text-xs font-semibold text-zinc-600">
                 A student-led cloud computing community, supported by AWS, active in 60+ countries.
               </p>
             </div>
 
-            {/* OFFICIAL AFFILIATION & PURPOSE NOTICE */}
             <div className="mb-8 border-2 border-black bg-[#FEF08A] p-4 text-black shadow-[3px_3px_0px_#000000]">
               <div className="mb-1 flex items-center gap-1.5 font-mono text-xs font-black uppercase tracking-wider text-black">
                 <HiOutlineShieldCheck className="h-4 w-4 text-black" />
@@ -112,7 +107,6 @@ export default function AboutPage() {
               </p>
             </div>
 
-            {/* Our Mission */}
             <div className="mb-8">
               <h2 className="mb-3 font-mono text-sm font-black uppercase tracking-wider text-black border-l-4 border-accent-purple pl-2">
                 Our Mission &amp; Purpose
@@ -122,7 +116,6 @@ export default function AboutPage() {
               </p>
             </div>
 
-            {/* 4 Core Pillars */}
             <div className="mb-8">
               <h2 className="mb-3 font-mono text-sm font-black uppercase tracking-wider text-black border-l-4 border-accent-blue pl-2">
                 The 4 Core Pillars
@@ -152,7 +145,6 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* Frequently Asked Questions */}
             <div className="mb-8">
               <h2 className="mb-3 font-mono text-sm font-black uppercase tracking-wider text-black border-l-4 border-black pl-2 flex items-center gap-1.5">
                 <HiOutlineQuestionMarkCircle className="h-4 w-4" />
@@ -175,20 +167,18 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* Meet The Team Section */}
-            <MeetTheTeam orgSlug="tut" />
+            <MeetTheTeam orgSlug={orgSlug} />
 
-            {/* Action Buttons */}
             <div className="mt-8 border-t-2 border-black pt-6 flex flex-col sm:flex-row items-center gap-3">
               <Link
-                href="/"
+                href={`/${orgSlug}`}
                 className="w-full sm:w-1/2 flex items-center justify-center gap-2 border-2 border-black bg-black px-4 py-3 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] hover:bg-zinc-800 transition-all text-center no-underline"
               >
                 <span>Explore Community Links</span>
                 <HiArrowUpRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/contact"
+                href={`/${orgSlug}/contact`}
                 className="w-full sm:w-1/2 flex items-center justify-center gap-2 border-2 border-black bg-white px-4 py-3 font-mono text-xs font-black uppercase text-black shadow-[3px_3px_0px_#000000] hover:bg-zinc-100 transition-all text-center no-underline"
               >
                 <span>Contact the Team</span>

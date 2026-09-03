@@ -9,26 +9,50 @@ import { useState, useEffect } from "react";
 import { supabase, LinkItem } from "@awssbg/shared";
 import LinkButton from "./LinkButton";
 
-export default function LinkList() {
+interface LinkListProps {
+  orgSlug?: string;
+}
+
+export default function LinkList({ orgSlug = "tut" }: LinkListProps) {
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadLinks() {
-      const { data } = await supabase
-        .from("links")
-        .select("*")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true });
+      try {
+        let orgId: string | null = null;
+        if (orgSlug) {
+          const { data: orgData } = await supabase
+            .from("orgs")
+            .select("id")
+            .eq("slug", orgSlug)
+            .single();
+          orgId = orgData?.id || null;
+        }
 
-      if (data) {
-        setLinks(data as LinkItem[]);
+        let query = supabase
+          .from("links")
+          .select("*")
+          .eq("is_active", true);
+
+        if (orgId) {
+          query = query.eq("org_id", orgId);
+        }
+
+        const { data } = await query.order("sort_order", { ascending: true });
+
+        if (data) {
+          setLinks(data as LinkItem[]);
+        }
+      } catch (err) {
+        console.error("Failed loading links:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     loadLinks();
-  }, []);
+  }, [orgSlug]);
 
   if (!loading && links.length === 0) return null;
 
