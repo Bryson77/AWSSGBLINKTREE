@@ -19,7 +19,7 @@ interface HeroProps {
   logoUrl?: string | null;
 }
 
-export default function Hero({ orgSlug = "tut", title, subtitle, logoUrl }: HeroProps) {
+export default function Hero({ orgSlug, title, subtitle, logoUrl }: HeroProps) {
   return (
     <section className="relative w-full overflow-hidden pt-6 sm:pt-9 pb-3">
       <div className="relative z-10 mx-auto max-w-[500px] px-4 sm:px-5 text-center">

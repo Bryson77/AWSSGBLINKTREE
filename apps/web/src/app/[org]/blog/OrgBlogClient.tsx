@@ -17,7 +17,7 @@ import {
 
 export default function OrgBlogClient() {
   const params = useParams();
-  const orgSlug = (params?.org as string) || "tut";
+  const orgSlug = (params?.org as string) || "";
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);

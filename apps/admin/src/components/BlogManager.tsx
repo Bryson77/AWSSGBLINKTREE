@@ -130,8 +130,13 @@ export function BlogManager({
     try {
       let targetOrgId = editingPost.org_id || currentOrgId;
       if (!targetOrgId || targetOrgId === "all") {
-        const { data: tutOrg } = await supabase.from("orgs").select("id").eq("slug", "tut").single();
-        targetOrgId = tutOrg?.id;
+        const { data: defaultOrg } = await supabase
+          .from("orgs")
+          .select("id")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        targetOrgId = defaultOrg?.id;
       }
 
       if (editingPost.id) {

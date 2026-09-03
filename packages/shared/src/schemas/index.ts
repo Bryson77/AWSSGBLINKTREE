@@ -97,6 +97,24 @@ export const announcementSchema = z
       .nullable()
       .optional()
       .transform((v) => (!v ? null : v.trim())),
+    cta_platform: z.string().default("website"),
+    location_type: z.enum(["in_person", "online", "hybrid"]).default("in_person"),
+    location_name: z
+      .string()
+      .max(200, "Location name cannot exceed 200 characters")
+      .nullable()
+      .optional()
+      .transform((v) => (!v ? null : v.trim())),
+    links: z
+      .array(
+        z.object({
+          title: z.string().min(1, "Link title is required").max(100).trim(),
+          url: z.string().url("Valid URL is required").trim(),
+          platform: z.string().min(1).default("website"),
+        })
+      )
+      .optional()
+      .default([]),
     start_date: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid start date"),
     end_date: z
       .string()
@@ -135,6 +153,18 @@ export const updateAnnouncementSchema = z.object({
     .nullable()
     .optional()
     .transform((v) => (!v ? null : v.trim())),
+  cta_platform: z.string().optional(),
+  location_type: z.enum(["in_person", "online", "hybrid"]).optional(),
+  location_name: z.string().max(200).nullable().optional().transform((v) => (!v ? null : v.trim())),
+  links: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(100).trim(),
+        url: z.string().url().trim(),
+        platform: z.string().min(1).default("website"),
+      })
+    )
+    .optional(),
   start_date: z.string().refine((val) => !isNaN(Date.parse(val))).optional(),
   end_date: z.string().refine((val) => !val || !isNaN(Date.parse(val))).nullable().optional().transform((v) => (!v ? null : v)),
   is_active: z.boolean().optional(),

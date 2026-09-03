@@ -1,52 +1,105 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Announcement } from "@awssbg/shared";
+import { supabase, Announcement } from "@awssbg/shared";
 import { HiOutlineArrowTopRightOnSquare, HiOutlineXMark, HiOutlineCalendarDays } from "react-icons/hi2";
 
 interface SitewideBannerProps {
-  announcement: Announcement | null;
-  orgSlug: string;
+  announcement?: Announcement | null;
+  orgSlug?: string;
 }
 
-export default function SitewideBanner({ announcement, orgSlug }: SitewideBannerProps) {
+export default function SitewideBanner({
+  announcement: propAnnouncement,
+  orgSlug,
+}: SitewideBannerProps) {
+  const [activeAnnouncement, setActiveAnnouncement] = useState<Announcement | null | undefined>(
+    propAnnouncement
+  );
   const [dismissed, setDismissed] = useState<boolean>(true); // start true to avoid flash before hydration
 
   useEffect(() => {
-    if (!announcement) {
+    if (propAnnouncement !== undefined) {
+      setActiveAnnouncement(propAnnouncement);
+      return;
+    }
+
+    async function loadActive() {
+      try {
+        let orgId: string | null = null;
+        if (orgSlug) {
+          const { data: orgData } = await supabase
+            .from("orgs")
+            .select("id")
+            .eq("slug", orgSlug)
+            .maybeSingle();
+          orgId = orgData?.id || null;
+        }
+
+        const nowIso = new Date().toISOString();
+        let query = supabase
+          .from("announcements")
+          .select("*")
+          .eq("is_active", true)
+          .lte("start_date", nowIso);
+
+        if (orgId) {
+          query = query.eq("org_id", orgId);
+        }
+
+        const { data: annData } = await query.order("start_date", { ascending: false });
+
+        if (annData && annData.length > 0) {
+          const activeItem = annData.find(
+            (a) => !a.end_date || new Date(a.end_date) >= new Date()
+          );
+          setActiveAnnouncement(activeItem ? (activeItem as Announcement) : null);
+        } else {
+          setActiveAnnouncement(null);
+        }
+      } catch {
+        setActiveAnnouncement(null);
+      }
+    }
+
+    loadActive();
+  }, [propAnnouncement, orgSlug]);
+
+  useEffect(() => {
+    if (!activeAnnouncement) {
       setDismissed(true);
       return;
     }
 
     // Check if dismissed in localStorage for this specific announcement ID
     try {
-      const dismissedKey = `sbg_banner_dismissed_${announcement.id}`;
+      const dismissedKey = `sbg_banner_dismissed_${activeAnnouncement.id}`;
       const isDismissed = localStorage.getItem(dismissedKey) === "true";
       setDismissed(isDismissed);
     } catch {
       setDismissed(false);
     }
-  }, [announcement]);
+  }, [activeAnnouncement]);
 
-  if (!announcement || !announcement.is_active || dismissed) return null;
+  if (!activeAnnouncement || !activeAnnouncement.is_active || dismissed) return null;
 
   const now = new Date();
-  const start = new Date(announcement.start_date);
-  const end = announcement.end_date ? new Date(announcement.end_date) : null;
+  const start = new Date(activeAnnouncement.start_date);
+  const end = activeAnnouncement.end_date ? new Date(activeAnnouncement.end_date) : null;
 
   // Render-time state calculation (§17)
   if (now < start || (end && now > end)) return null;
 
   const handleDismiss = () => {
     try {
-      localStorage.setItem(`sbg_banner_dismissed_${announcement.id}`, "true");
+      localStorage.setItem(`sbg_banner_dismissed_${activeAnnouncement.id}`, "true");
     } catch {
       // Ignore storage write failure in restricted browsing contexts
     }
     setDismissed(true);
   };
 
-  const destinationUrl = announcement.cta_url || `/${orgSlug}`;
+  const destinationUrl = activeAnnouncement.cta_url || "/";
   const isExternal = destinationUrl.startsWith("http://") || destinationUrl.startsWith("https://");
 
   return (

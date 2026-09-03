@@ -263,12 +263,13 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
     // Resolve target organization id if not provided
     let targetOrgId = org_id;
     if (!targetOrgId) {
-      const { data: tutOrg } = await supabase
+      const { data: defaultOrg } = await supabase
         .from("orgs")
         .select("id")
-        .eq("slug", "tut")
-        .single();
-      targetOrgId = tutOrg?.id;
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      targetOrgId = defaultOrg?.id;
     }
 
     let savedId: string | undefined;

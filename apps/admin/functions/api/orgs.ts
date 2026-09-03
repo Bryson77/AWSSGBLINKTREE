@@ -31,7 +31,7 @@ function buildLeaderInviteEmail(data: {
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 540px; background-color: #FFFFFF; border: 3px solid #000000; box-shadow: 6px 6px 0px #000000; padding: 32px 28px;">
         <tr><td>
           <div style="display: inline-block; background-color: #000000; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; letter-spacing: 2px; padding: 3px 8px; margin-bottom: 16px;">
-            // AWS_SBG // CHAPTER_ONBOARDING // ${safeSlug}
+            // AWS_SBG // SBG_ONBOARDING // ${safeSlug}
           </div>
           <h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 900; text-transform: uppercase; color: #000000; line-height: 1.1;">
             Welcome, Group Leader! <br>
@@ -48,20 +48,20 @@ function buildLeaderInviteEmail(data: {
             You have been appointed as the official <strong>Group Leader</strong> for <strong>${safeOrg}</strong> on the AWS Student Builder Group Platform by <strong>${safeInviter}</strong>.
           </p>
           <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F4F4F5; border: 2px solid #000000; padding: 14px; margin-bottom: 20px; font-family: 'Courier New', Courier, monospace; font-size: 12px;">
-            <tr><td style="padding: 4px 0;"><strong>Chapter:</strong> ${safeOrg} (@${data.orgSlug})</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>SBG:</strong> ${safeOrg} (@${data.orgSlug})</td></tr>
             <tr><td style="padding: 4px 0;"><strong>Assigned Role:</strong> GROUP LEADER</td></tr>
             <tr><td style="padding: 4px 0;"><strong>Public Hub URL:</strong> https://awssbg.online/${data.orgSlug}</td></tr>
             <tr><td style="padding: 4px 0;"><strong>Admin Console:</strong> https://admin.awssbg.online</td></tr>
           </table>
           <p style="margin: 0 0 16px 0; font-size: 13px; color: #52525B;">
-            Click below to activate your account, configure your password, and begin customizing your chapter&rsquo;s links, meetups, team bios, and announcements.
+            Click below to activate your account, configure your password, and begin customizing your SBG&rsquo;s links, meetups, team bios, and announcements.
           </p>
         </td></tr>
         <tr><td align="center" style="padding-bottom: 24px;">
           <table border="0" cellpadding="0" cellspacing="0" width="100%">
             <tr><td align="center">
               <a href="${data.actionLink}" target="_blank" style="display: block; background-color: #000000; color: #FFFFFF; border: 2px solid #000000; box-shadow: 4px 4px 0px #7C3AED; font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; padding: 14px 20px; text-align: center;">
-                ACTIVATE CHAPTER CONSOLE &rarr;
+                ACTIVATE SBG CONSOLE &rarr;
               </a>
             </td></tr>
           </table>

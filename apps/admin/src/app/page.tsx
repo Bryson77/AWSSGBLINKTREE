@@ -755,7 +755,7 @@ function AddNewSbgModal({
       }
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to onboard new SBG chapter.");
+        throw new Error(data.error || "Failed to onboard new SBG.");
       }
 
       toast.success(`AWS SBG @${slug.toUpperCase()} onboarded!`, {
@@ -790,13 +790,13 @@ function AddNewSbgModal({
       >
         <div className="border-b-2 border-black pb-3">
           <div className="mb-1 inline-block border border-black bg-black px-2 py-0.5 font-mono text-[9px] font-black uppercase text-white shadow-[2px_2px_0px_#7C3AED]">
-            // CHAPTER_EXPANSION (§8.2)
+            // SBG_EXPANSION (§8.2)
           </div>
           <h2 className="text-xl font-black uppercase tracking-tight text-black">
             Onboard New University SBG
           </h2>
           <p className="font-mono text-xs font-medium text-zinc-600">
-            Establish a new student chapter with its own links, blog, team page, and designated Leader.
+            Establish a new student SBG with its own links, blog, team page, and designated Leader.
           </p>
         </div>
 
@@ -816,7 +816,7 @@ function AddNewSbgModal({
 
         <div>
           <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
-            Chapter URL Identifier (Slug) *
+            SBG URL Identifier (Slug) *
           </label>
           <div className="flex items-center">
             <span className="border-2 border-r-0 border-black bg-zinc-100 px-2.5 py-2 font-mono text-xs font-bold text-zinc-600">
@@ -878,7 +878,7 @@ function AddNewSbgModal({
             disabled={loading}
             className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple disabled:opacity-50 cursor-pointer"
           >
-            {loading ? "Onboarding Chapter…" : "Launch Chapter & Invite Leader →"}
+            {loading ? "Onboarding SBG…" : "Launch SBG & Invite Leader →"}
           </button>
         </div>
       </form>
@@ -1395,11 +1395,10 @@ function Dashboard() {
       setCurrentUserRole(profile?.role || (isSuper ? "superadmin" : "member"));
       setCurrentUserName(profile?.name || email.split("@")[0] || "Admin");
 
-      // Initial active group: TUT or assigned org
+      // Initial active group: user's assigned org or first loaded org from database
       let initialOrg = profile?.org_id;
       if (!initialOrg || isSuper) {
-        const tutOrg = loadedOrgs.find((o) => o.slug === "tut");
-        initialOrg = tutOrg?.id || loadedOrgs[0]?.id || "";
+        initialOrg = loadedOrgs[0]?.id || "";
       }
 
       setSelectedOrgId(initialOrg);
@@ -1491,7 +1490,7 @@ function Dashboard() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `inquiries_${selectedOrgId || "tut"}_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `inquiries_${selectedOrgId || "all"}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1751,7 +1750,7 @@ function Dashboard() {
                   <button
                     onClick={() => setShowAddOrgModal(true)}
                     className="font-mono text-[9px] font-black uppercase text-accent-purple hover:underline cursor-pointer"
-                    title="Onboard new university SBG chapter"
+                    title="Onboard new university SBG"
                   >
                     + Add SBG
                   </button>
@@ -2567,10 +2566,10 @@ function Dashboard() {
               <div className="mt-8 pt-6 border-t-2 border-black/20">
                 <div className="mb-4">
                   <div className="mb-1 inline-block border border-black bg-zinc-100 px-2 py-0.2 font-mono text-[9px] font-black uppercase text-black">
-                    // CHAPTER_SETTINGS
+                    // SBG_SETTINGS
                   </div>
                   <h3 className="text-xl font-black uppercase tracking-tight text-black">
-                    Chapter Settings &amp; Public Identity
+                    SBG Settings &amp; Public Identity
                   </h3>
                   <p className="font-mono text-xs text-zinc-600 mt-0.5">
                     Customize the public hero headlines, cover imagery, and official contact recipient.

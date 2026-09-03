@@ -67,7 +67,7 @@ const FAQS = [
 
 export default function OrgAboutClient() {
   const params = useParams();
-  const orgSlug = (params?.org as string) || "tut";
+  const orgSlug = (params?.org as string) || "";
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
 
   useEffect(() => {

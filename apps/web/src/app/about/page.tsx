@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import SitewideBanner from "@/components/SitewideBanner";
 import MeetTheTeam from "@/components/MeetTheTeam";
 import {
   HiArrowLeft,
@@ -70,6 +71,7 @@ export default function AboutPage() {
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
       <Header />
+      <SitewideBanner />
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="mx-auto max-w-[680px]">
@@ -176,7 +178,7 @@ export default function AboutPage() {
             </div>
 
             {/* Meet The Team Section */}
-            <MeetTheTeam orgSlug="tut" />
+            <MeetTheTeam />
 
             {/* Action Buttons */}
             <div className="mt-8 border-t-2 border-black pt-6 flex flex-col sm:flex-row items-center gap-3">

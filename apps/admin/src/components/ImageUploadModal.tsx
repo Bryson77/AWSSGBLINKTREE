@@ -21,7 +21,7 @@ export function ImageUploadModal({
   onSuccess,
   aspectRatio = "1:1",
   category = "team",
-  orgId = "tut",
+  orgId = "default",
   title = "Upload & Crop Image",
 }: ImageUploadModalProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);

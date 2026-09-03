@@ -8,25 +8,36 @@ interface MeetTheTeamProps {
   orgSlug?: string;
 }
 
-export default function MeetTheTeam({ orgSlug = "tut" }: MeetTheTeamProps) {
+export default function MeetTheTeam({ orgSlug }: MeetTheTeamProps) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadTeam() {
       try {
-        // Look up org id by slug
-        const { data: orgData } = await supabase
-          .from("orgs")
-          .select("id")
-          .eq("slug", orgSlug)
-          .single();
+        let orgId: string | null = null;
+        if (orgSlug) {
+          const { data: orgData } = await supabase
+            .from("orgs")
+            .select("id")
+            .eq("slug", orgSlug)
+            .maybeSingle();
+          orgId = orgData?.id || null;
+        } else {
+          const { data: defaultOrg } = await supabase
+            .from("orgs")
+            .select("id")
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          orgId = defaultOrg?.id || null;
+        }
 
-        if (orgData) {
+        if (orgId) {
           const { data } = await supabase
             .from("team_members")
             .select("*")
-            .eq("org_id", orgData.id)
+            .eq("org_id", orgId)
             .order("sort_order", { ascending: true });
 
           if (data) {

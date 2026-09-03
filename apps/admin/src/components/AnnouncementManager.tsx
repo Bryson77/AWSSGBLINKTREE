@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { supabase, Announcement, logActivity, announcementSchema } from "@awssbg/shared";
+import {
+  supabase,
+  Announcement,
+  AnnouncementActionLink,
+  logActivity,
+  announcementSchema,
+  getIconForPlatform,
+} from "@awssbg/shared";
 import { toast } from "sonner";
 import { ImageUploadModal } from "./ImageUploadModal";
 import {
@@ -14,7 +21,29 @@ import {
   HiOutlineMegaphone,
   HiOutlineEye,
   HiOutlineArrowTopRightOnSquare,
+  HiOutlineMapPin,
+  HiOutlineVideoCamera,
 } from "react-icons/hi2";
+
+const PLATFORMS = [
+  "meetup",
+  "whatsapp",
+  "website",
+  "aws",
+  "aws-skill-builder",
+  "discord",
+  "linkedin",
+  "github",
+  "youtube",
+  "instagram",
+  "x",
+  "facebook",
+  "telegram",
+  "medium",
+  "devto",
+  "hashnode",
+  "other",
+];
 
 interface AnnouncementManagerProps {
   currentOrgId: string;
@@ -89,6 +118,10 @@ export function AnnouncementManager({
       banner_bg_color: "#7C3AED",
       cta_label: "Learn More",
       cta_url: "",
+      cta_platform: "website",
+      location_type: "in_person",
+      location_name: "",
+      links: [],
       start_date: nowLocal,
       end_date: "",
       is_active: true,
@@ -98,13 +131,65 @@ export function AnnouncementManager({
   };
 
   const handleEdit = (ann: Announcement) => {
+    let existingLinks: AnnouncementActionLink[] = [];
+    if (Array.isArray(ann.links) && ann.links.length > 0) {
+      existingLinks = ann.links;
+    } else if (ann.cta_url) {
+      existingLinks = [
+        {
+          title: ann.cta_label || "Learn More",
+          url: ann.cta_url,
+          platform: ann.cta_platform || "website",
+        },
+      ];
+    }
+
     setEditingItem({
       ...ann,
+      location_type: ann.location_type || "in_person",
+      location_name: ann.location_name || "",
+      cta_platform: ann.cta_platform || "website",
+      links: existingLinks,
       start_date: toLocalDatetimeValue(ann.start_date),
       end_date: toLocalDatetimeValue(ann.end_date),
     });
     setActiveModalTab("form");
     setIsEditorOpen(true);
+  };
+
+  const handleAddLink = () => {
+    if (!editingItem) return;
+    const currentLinks = editingItem.links || [];
+    setEditingItem({
+      ...editingItem,
+      links: [
+        ...currentLinks,
+        {
+          title: "RSVP on Meetup",
+          url: "",
+          platform: "meetup",
+        },
+      ],
+    });
+  };
+
+  const handleUpdateLink = (index: number, field: keyof AnnouncementActionLink, value: string) => {
+    if (!editingItem || !editingItem.links) return;
+    const updated = [...editingItem.links];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditingItem({
+      ...editingItem,
+      links: updated,
+    });
+  };
+
+  const handleRemoveLink = (index: number) => {
+    if (!editingItem || !editingItem.links) return;
+    const updated = editingItem.links.filter((_, i) => i !== index);
+    setEditingItem({
+      ...editingItem,
+      links: updated,
+    });
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -117,12 +202,30 @@ export function AnnouncementManager({
     try {
       let targetOrgId = editingItem.org_id || currentOrgId;
       if (!targetOrgId || targetOrgId === "all") {
-        const { data: tutOrg, error: tutError } = await supabase.from("orgs").select("id").eq("slug", "tut").single();
-        if (tutError || !tutOrg) {
+        const { data: defaultOrg, error: orgError } = await supabase
+          .from("orgs")
+          .select("id")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .single();
+        if (orgError || !defaultOrg) {
           throw new Error("A valid organization must be selected.");
         }
-        targetOrgId = tutOrg.id;
+        targetOrgId = defaultOrg.id;
       }
+
+      const validLinks: AnnouncementActionLink[] = (editingItem.links || [])
+        .filter((l) => l.title?.trim() && l.url?.trim())
+        .map((l) => ({
+          title: l.title.trim(),
+          url: l.url.trim(),
+          platform: l.platform || "website",
+        }));
+
+      const primaryLink = validLinks[0];
+      const ctaLabel = editingItem.cta_label?.trim() || primaryLink?.title || "Learn More";
+      const ctaUrl = editingItem.cta_url?.trim() || primaryLink?.url || null;
+      const ctaPlatform = editingItem.cta_platform?.trim() || primaryLink?.platform || "website";
 
       const rawPayload = {
         org_id: targetOrgId,
@@ -131,8 +234,12 @@ export function AnnouncementManager({
         poster_image_url: editingItem.poster_image_url || null,
         banner_text: editingItem.banner_text?.trim() || "We have an event coming up!",
         banner_bg_color: editingItem.banner_bg_color?.trim() || "#7C3AED",
-        cta_label: editingItem.cta_label?.trim() || "Learn More",
-        cta_url: editingItem.cta_url?.trim() || null,
+        cta_label: ctaLabel,
+        cta_url: ctaUrl,
+        cta_platform: ctaPlatform,
+        location_type: editingItem.location_type || "in_person",
+        location_name: editingItem.location_type === "online" ? null : editingItem.location_name?.trim() || null,
+        links: validLinks,
         start_date: editingItem.start_date ? new Date(editingItem.start_date).toISOString() : new Date().toISOString(),
         end_date: editingItem.end_date && editingItem.end_date.trim() ? new Date(editingItem.end_date).toISOString() : null,
         is_active: editingItem.is_active ?? true,
@@ -327,12 +434,32 @@ export function AnnouncementManager({
                   )}
 
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span
                         className={`border border-black px-2 py-0.5 font-mono text-[9px] font-black uppercase shadow-[1px_1px_0px_#000000] ${statusColor}`}
                       >
                         {status}
                       </span>
+                      {ann.location_type && (
+                        <span className="border border-black bg-zinc-100 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-zinc-700 flex items-center gap-1 shadow-[1px_1px_0px_#000000]">
+                          {ann.location_type === "online" ? (
+                            <>
+                              <HiOutlineVideoCamera className="h-3 w-3 text-accent-purple shrink-0" />
+                              <span>ONLINE</span>
+                            </>
+                          ) : (
+                            <>
+                              <HiOutlineMapPin className="h-3 w-3 text-accent-blue shrink-0" />
+                              <span className="truncate max-w-[140px]">{ann.location_name || "IN-PERSON"}</span>
+                            </>
+                          )}
+                        </span>
+                      )}
+                      {ann.links && ann.links.length > 0 && (
+                        <span className="border border-black bg-zinc-100 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-zinc-700 shadow-[1px_1px_0px_#000000]">
+                          {ann.links.length} {ann.links.length === 1 ? "Link" : "Links"}
+                        </span>
+                      )}
                       <span className="font-mono text-[10px] text-zinc-500">
                         {new Date(ann.start_date).toLocaleDateString()}
                         {ann.end_date ? ` → ${new Date(ann.end_date).toLocaleDateString()}` : " (No end date)"}
@@ -547,11 +674,153 @@ export function AnnouncementManager({
                     </div>
                   </div>
 
-                  {/* CTA Label & URL */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Event Location Indicator */}
+                  <div className="border-2 border-black bg-zinc-50 p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="block font-mono text-xs font-black uppercase text-black">
+                        Location Indicator
+                      </label>
+                      <span className="font-mono text-[10px] text-zinc-500">
+                        Displays badge on announcement card
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="mb-1 block font-mono text-[10px] font-bold uppercase text-zinc-600">
+                          Attendance Mode *
+                        </label>
+                        <select
+                          value={editingItem.location_type || "in_person"}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              location_type: e.target.value as "in_person" | "online" | "hybrid",
+                            })
+                          }
+                          className="w-full border-2 border-black bg-white px-3 py-2 font-mono text-xs font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED] cursor-pointer"
+                        >
+                          <option value="in_person">IN-PERSON (Physical Venue / Campus)</option>
+                          <option value="online">ONLINE (Virtual / Livestream)</option>
+                          <option value="hybrid">HYBRID (Campus &amp; Virtual)</option>
+                        </select>
+                      </div>
+
+                      {editingItem.location_type !== "online" ? (
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block font-mono text-[10px] font-bold uppercase text-zinc-600">
+                            Campus / Venue Location *
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. TUT Soshanguve South Campus, Lab 3"
+                            value={editingItem.location_name || ""}
+                            onChange={(e) => setEditingItem({ ...editingItem, location_name: e.target.value })}
+                            className="w-full border-2 border-black bg-white px-3 py-2 font-mono text-xs text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+                          />
+                        </div>
+                      ) : (
+                        <div className="md:col-span-2 flex items-center border border-dashed border-black/30 bg-white p-2 text-zinc-600 font-mono text-xs">
+                          <HiOutlineVideoCamera className="h-4 w-4 mr-2 text-accent-purple shrink-0" />
+                          <span>Event will be badged as &quot;ONLINE EVENT&quot; with virtual indicator.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Links & Platform Buttons */}
+                  <div className="border-2 border-black bg-zinc-50 p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="block font-mono text-xs font-black uppercase text-black">
+                          Action Links &amp; Platform Buttons
+                        </label>
+                        <p className="font-mono text-[10px] text-zinc-500">
+                          Add buttons with brand logos (Meetup, WhatsApp, AWS, Discord, LinkedIn, etc.)
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddLink}
+                        className="flex items-center gap-1 border-2 border-black bg-black px-3 py-1.5 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#7C3AED] hover:bg-accent-purple cursor-pointer active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+                      >
+                        <HiPlus className="h-3.5 w-3.5" />
+                        <span>Add Link</span>
+                      </button>
+                    </div>
+
+                    {(!editingItem.links || editingItem.links.length === 0) ? (
+                      <div className="border-2 border-dashed border-black/30 bg-white p-4 text-center">
+                        <p className="font-mono text-xs text-zinc-600 font-medium">
+                          No custom platform links added. Click &quot;Add Link&quot; above to add Meetup, WhatsApp, or other registration buttons.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {editingItem.links.map((link, idx) => {
+                          const Icon = getIconForPlatform(link.platform || "website");
+                          return (
+                            <div
+                              key={idx}
+                              className="flex flex-col sm:flex-row sm:items-center gap-2.5 border-2 border-black bg-white p-3 shadow-[2px_2px_0px_#000000]"
+                            >
+                              <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex h-9 w-9 items-center justify-center border-2 border-black bg-zinc-100 shadow-[1px_1px_0px_#000000]">
+                                  <Icon className="h-4 w-4 text-black" />
+                                </div>
+                                <select
+                                  value={link.platform || "website"}
+                                  onChange={(e) => handleUpdateLink(idx, "platform", e.target.value)}
+                                  className="h-9 border-2 border-black bg-white px-2 font-mono text-xs font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED] cursor-pointer"
+                                >
+                                  {PLATFORMS.map((p) => (
+                                    <option key={p} value={p}>
+                                      {p.toUpperCase()}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <input
+                                  type="text"
+                                  placeholder="Button Label (e.g. RSVP on Meetup)"
+                                  value={link.title || ""}
+                                  onChange={(e) => handleUpdateLink(idx, "title", e.target.value)}
+                                  className="w-full h-9 border-2 border-black bg-white px-3 font-mono text-xs font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+                                />
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <input
+                                  type="url"
+                                  placeholder="https://..."
+                                  value={link.url || ""}
+                                  onChange={(e) => handleUpdateLink(idx, "url", e.target.value)}
+                                  className="w-full h-9 border-2 border-black bg-white px-3 font-mono text-xs text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+                                />
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveLink(idx)}
+                                className="flex h-9 w-9 items-center justify-center border-2 border-black bg-zinc-100 text-red-600 hover:bg-red-500 hover:text-white active:translate-x-[1px] active:translate-y-[1px] cursor-pointer shrink-0"
+                                title="Remove link"
+                              >
+                                <HiOutlineTrash className="h-4 w-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sitewide Alert Banner CTA Configuration */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-2 border-black/20 bg-zinc-50 p-3.5">
                     <div>
                       <label className="mb-1 block font-mono text-xs font-black uppercase text-black">
-                        Button / CTA Label
+                        Sitewide Banner Button Label
                       </label>
                       <input
                         type="text"
@@ -560,11 +829,14 @@ export function AnnouncementManager({
                         onChange={(e) => setEditingItem({ ...editingItem, cta_label: e.target.value })}
                         className="w-full border-2 border-black bg-white px-3 py-2 font-mono text-xs font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
                       />
+                      <p className="font-mono text-[9px] text-zinc-500 mt-1">
+                        Defaults to first action link title if set.
+                      </p>
                     </div>
 
                     <div>
                       <label className="mb-1 block font-mono text-xs font-black uppercase text-black">
-                        Button Destination URL (Optional)
+                        Sitewide Banner Destination URL (Optional)
                       </label>
                       <input
                         type="url"
@@ -573,6 +845,9 @@ export function AnnouncementManager({
                         onChange={(e) => setEditingItem({ ...editingItem, cta_url: e.target.value })}
                         className="w-full border-2 border-black bg-white px-3 py-2 font-mono text-xs text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
                       />
+                      <p className="font-mono text-[9px] text-zinc-500 mt-1">
+                        Defaults to first action link URL if set.
+                      </p>
                     </div>
                   </div>
 
@@ -664,6 +939,26 @@ export function AnnouncementManager({
                         </span>
                       </div>
 
+                      {/* Location Badge Preview */}
+                      {editingItem.location_type && (
+                        <div className="mb-3 inline-flex items-center gap-1.5 border-2 border-black bg-zinc-100 px-2.5 py-1 font-mono text-[11px] font-black uppercase text-black shadow-[2px_2px_0px_#000000]">
+                          {editingItem.location_type === "online" ? (
+                            <>
+                              <HiOutlineVideoCamera className="h-3.5 w-3.5 text-accent-purple shrink-0" />
+                              <span>ONLINE EVENT</span>
+                            </>
+                          ) : (
+                            <>
+                              <HiOutlineMapPin className="h-3.5 w-3.5 text-accent-blue shrink-0" />
+                              <span>
+                                {editingItem.location_type === "hybrid" ? "HYBRID // " : "IN-PERSON // "}
+                                {editingItem.location_name || "CAMPUS VENUE"}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+
                       {editingItem.poster_image_url && (
                         <div className="mb-4 overflow-hidden border-[3px] border-black bg-zinc-950">
                           <img
@@ -683,11 +978,28 @@ export function AnnouncementManager({
                         </p>
                       )}
 
-                      <div className="mt-4 pt-3 border-t-2 border-black/10 flex justify-end">
-                        <span className="inline-flex items-center gap-1.5 border-2 border-black bg-black px-4 py-2 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED]">
-                          <span>{editingItem.cta_label || "Learn More"}</span>
-                          <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5" />
-                        </span>
+                      {/* Preview Action Links */}
+                      <div className="mt-4 pt-3 border-t-2 border-black/10 flex flex-wrap items-center justify-end gap-2.5">
+                        {editingItem.links && editingItem.links.length > 0 ? (
+                          editingItem.links.map((link, idx) => {
+                            const Icon = getIconForPlatform(link.platform || "website");
+                            return (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-2 border-2 border-black bg-black px-4 py-2 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED]"
+                              >
+                                <Icon className="h-3.5 w-3.5 text-white" />
+                                <span>{link.title || "Action Link"}</span>
+                                <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5 opacity-80" />
+                              </span>
+                            );
+                          })
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 border-2 border-black bg-black px-4 py-2 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED]">
+                            <span>{editingItem.cta_label || "Learn More"}</span>
+                            <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5" />
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -725,7 +1037,7 @@ export function AnnouncementManager({
             }}
             aspectRatio="poster"
             category="announcement"
-            orgId={editingItem?.org_id && editingItem.org_id !== "all" ? editingItem.org_id : "tut"}
+            orgId={editingItem?.org_id && editingItem.org_id !== "all" ? editingItem.org_id : "default"}
             title="Upload Event Announcement Poster"
           />
         </div>

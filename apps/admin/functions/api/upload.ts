@@ -124,7 +124,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const category = (formData.get("category") as string) || "general";
-    const orgId = (formData.get("org_id") as string) || "tut";
+    const orgId = (formData.get("org_id") as string) || "default";
 
     if (!file) {
       return new Response(

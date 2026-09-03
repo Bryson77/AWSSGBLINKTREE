@@ -12,12 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase REST API
+        env:
+          ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bWdrcmV1Y3ZiZnRvbGlqdHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODc3NzcsImV4cCI6MjEwMzg2Mzc3N30.qvIN3i_hTOEclyULEZhUZg_8PbNC4xM277EOjvjH9OU' }}
+          BASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL || 'https://yzmgkreucvbftolijtpl.supabase.co' }}
         run: |
           echo "Pinging Supabase at $(date -u)..."
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
-            "${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://yzmgkreucvbftolijtpl.supabase.co' }}/rest/v1/orgs?select=id&limit=1")
+            -H "apikey: $ANON_KEY" \
+            -H "Authorization: Bearer $ANON_KEY" \
+            "$BASE_URL/rest/v1/orgs?select=id&limit=1")
           
           echo "HTTP Response Status: $HTTP_STATUS"
           if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then

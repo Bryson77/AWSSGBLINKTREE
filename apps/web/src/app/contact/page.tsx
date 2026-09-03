@@ -10,8 +10,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import SitewideBanner from "@/components/SitewideBanner";
 import { toast } from "sonner";
-import { supabase } from "@awssbg/shared";
+import { supabase, Announcement } from "@awssbg/shared";
 import {
   HiArrowLeft,
   HiOutlineEnvelope,
@@ -63,6 +64,7 @@ const CATEGORIES = [
 
 export default function ContactPage() {
   const [channels, setChannels] = useState(DEFAULT_CHANNELS);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -71,26 +73,55 @@ export default function ContactPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  // Dynamically load active community channel URLs from database
+  // Dynamically load active community channel URLs and active announcement from database
   useEffect(() => {
-    async function loadDynamicLinks() {
-      const { data } = await supabase
-        .from("links")
-        .select("platform, url")
-        .eq("is_active", true);
+    async function loadData() {
+      try {
+        const { data: orgData } = await supabase
+          .from("orgs")
+          .select("id")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
 
-      if (data && data.length > 0) {
-        setChannels((prev) =>
-          prev.map((ch) => {
-            const match = data.find(
-              (d) => d.platform?.toLowerCase() === ch.platform.toLowerCase()
+        if (orgData?.id) {
+          const nowIso = new Date().toISOString();
+          const { data: annData } = await supabase
+            .from("announcements")
+            .select("*")
+            .eq("org_id", orgData.id)
+            .eq("is_active", true)
+            .lte("start_date", nowIso)
+            .order("start_date", { ascending: false });
+
+          if (annData && annData.length > 0) {
+            const activeItem = annData.find(
+              (a) => !a.end_date || new Date(a.end_date) >= new Date()
             );
-            return match?.url ? { ...ch, href: match.url } : ch;
-          })
-        );
+            setAnnouncement(activeItem ? (activeItem as Announcement) : null);
+          }
+        }
+
+        const { data } = await supabase
+          .from("links")
+          .select("platform, url")
+          .eq("is_active", true);
+
+        if (data && data.length > 0) {
+          setChannels((prev) =>
+            prev.map((ch) => {
+              const match = data.find(
+                (d) => d.platform?.toLowerCase() === ch.platform.toLowerCase()
+              );
+              return match?.url ? { ...ch, href: match.url } : ch;
+            })
+          );
+        }
+      } catch (err) {
+        console.error("Failed loading contact page data:", err);
       }
     }
-    loadDynamicLinks();
+    loadData();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,6 +173,7 @@ export default function ContactPage() {
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
       <Header />
+      <SitewideBanner announcement={announcement} />
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="mx-auto max-w-[680px]">

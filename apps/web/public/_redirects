@@ -1,3 +1,4 @@
 # Cloudflare Pages Redirects & SPA Fallback
 # Static files and pre-rendered pages match first. Unmatched dynamic paths fallback to index.html with HTTP 200 for client hydration.
 /*  /index.html  200
+

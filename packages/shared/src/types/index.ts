@@ -59,6 +59,12 @@ export interface AuditLogEntry {
   created_at: string;
 }
 
+export interface AnnouncementActionLink {
+  title: string;
+  url: string;
+  platform: string;
+}
+
 export interface Announcement {
   id: string;
   org_id: string;
@@ -69,6 +75,10 @@ export interface Announcement {
   banner_bg_color: string;
   cta_label: string;
   cta_url?: string | null;
+  cta_platform?: string | null;
+  location_type?: "in_person" | "online" | "hybrid";
+  location_name?: string | null;
+  links?: AnnouncementActionLink[];
   start_date: string;
   end_date?: string | null;
   is_active: boolean;

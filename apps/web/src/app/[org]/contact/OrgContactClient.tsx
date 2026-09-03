@@ -53,7 +53,7 @@ const CATEGORIES = [
 
 export default function OrgContactClient() {
   const params = useParams();
-  const orgSlug = (params?.org as string) || "tut";
+  const orgSlug = (params?.org as string) || "";
 
   const [orgId, setOrgId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);

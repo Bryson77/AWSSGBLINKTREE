@@ -11,7 +11,7 @@ import Footer from "@/components/Footer";
 
 export default function OrgHomeClient() {
   const params = useParams();
-  const orgSlug = (params?.org as string) || "tut";
+  const orgSlug = (params?.org as string) || "";
 
   const [settings, setSettings] = useState<{
     hero_title?: string;

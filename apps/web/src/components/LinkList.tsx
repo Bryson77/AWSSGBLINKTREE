@@ -13,7 +13,7 @@ interface LinkListProps {
   orgSlug?: string;
 }
 
-export default function LinkList({ orgSlug = "tut" }: LinkListProps) {
+export default function LinkList({ orgSlug }: LinkListProps) {
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,8 +26,16 @@ export default function LinkList({ orgSlug = "tut" }: LinkListProps) {
             .from("orgs")
             .select("id")
             .eq("slug", orgSlug)
-            .single();
+            .maybeSingle();
           orgId = orgData?.id || null;
+        } else {
+          const { data: defaultOrg } = await supabase
+            .from("orgs")
+            .select("id")
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          orgId = defaultOrg?.id || null;
         }
 
         let query = supabase

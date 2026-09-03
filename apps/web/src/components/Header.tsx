@@ -27,22 +27,17 @@ export default function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Detect if currently inside a scoped SBG route: e.g. /tut, /tut/about, etc.
-  const pathParts = pathname ? pathname.split("/").filter(Boolean) : [];
-  const firstPart = pathParts[0];
-  const isGlobalRoute = ["about", "blog", "contact", "privacy", "terms"].includes(firstPart);
-  const orgSlug = !isGlobalRoute && firstPart ? firstPart : null;
-
+  // Single-SBG mode: all primary navigation points to unified root routes
   const navLinks = [
-    { href: orgSlug ? `/${orgSlug}` : "/", label: "Home", icon: HiOutlineHome },
-    { href: orgSlug ? `/${orgSlug}/about` : "/about", label: "About", icon: HiOutlineInformationCircle },
-    { href: orgSlug ? `/${orgSlug}/blog` : "/blog", label: "Blog", icon: HiOutlineDocumentText },
-    { href: orgSlug ? `/${orgSlug}/contact` : "/contact", label: "Contact", icon: HiOutlineEnvelope },
+    { href: "/", label: "Home", icon: HiOutlineHome },
+    { href: "/about", label: "About", icon: HiOutlineInformationCircle },
+    { href: "/blog", label: "Blog", icon: HiOutlineDocumentText },
+    { href: "/contact", label: "Contact", icon: HiOutlineEnvelope },
   ];
 
   const checkIsActive = (linkHref: string) => {
-    if (linkHref === "/" || (orgSlug && linkHref === `/${orgSlug}`)) {
-      return pathname === linkHref;
+    if (linkHref === "/") {
+      return pathname === "/" || pathname === "/tut";
     }
     return pathname.startsWith(linkHref);
   };
@@ -80,7 +75,7 @@ export default function Header() {
     <header className="sticky top-0 z-40 w-full border-b-[3px] border-black bg-white pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex h-[58px] sm:h-[62px] max-w-[720px] items-center justify-between px-4 sm:px-6">
         {/* Brand logo + Wordmark */}
-        <Link href={orgSlug ? `/${orgSlug}` : "/"} className="flex items-center gap-2.5 sm:gap-3 group no-underline">
+        <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group no-underline">
           <div className="relative flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center border-2 border-black bg-white p-1 shadow-[2px_2px_0px_#000000] transition-transform group-hover:scale-105">
             <Image
               src="/logo.png"

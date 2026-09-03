@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { supabase, Post } from "@awssbg/shared";
+import SitewideBanner from "@/components/SitewideBanner";
+import { supabase, Post, Announcement } from "@awssbg/shared";
 import {
   HiArrowLeft,
   HiOutlineCalendar,
@@ -15,11 +16,39 @@ import {
 
 export default function BlogPage() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadPosts() {
+    async function loadData() {
       try {
+        const { data: orgData } = await supabase
+          .from("orgs")
+          .select("id")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (orgData?.id) {
+          const nowIso = new Date().toISOString();
+          const { data: annData } = await supabase
+            .from("announcements")
+            .select("*")
+            .eq("org_id", orgData.id)
+            .eq("is_active", true)
+            .lte("start_date", nowIso)
+            .order("start_date", { ascending: false });
+
+          if (annData && annData.length > 0) {
+            const activeItem = annData.find(
+              (a) => !a.end_date || new Date(a.end_date) >= new Date()
+            );
+            setAnnouncement(activeItem ? (activeItem as Announcement) : null);
+          } else {
+            setAnnouncement(null);
+          }
+        }
+
         const { data, error } = await supabase
           .from("posts")
           .select("*")
@@ -30,13 +59,13 @@ export default function BlogPage() {
           setPosts(data as Post[]);
         }
       } catch (err) {
-        console.error("Failed loading blog posts:", err);
+        console.error("Failed loading blog data:", err);
       } finally {
         setLoading(false);
       }
     }
 
-    loadPosts();
+    loadData();
   }, []);
 
   const calculateReadingTime = (content: string) => {
@@ -57,6 +86,7 @@ export default function BlogPage() {
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
       <Header />
+      <SitewideBanner announcement={announcement} />
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="mx-auto max-w-[720px]">

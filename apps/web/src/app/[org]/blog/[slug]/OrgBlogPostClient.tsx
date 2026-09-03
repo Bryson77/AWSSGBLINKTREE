@@ -18,7 +18,7 @@ import { toast } from "sonner";
 
 export default function OrgBlogPostClient() {
   const params = useParams();
-  const orgSlug = (params?.org as string) || "tut";
+  const orgSlug = (params?.org as string) || "";
   const slug = params?.slug as string;
 
   const [post, setPost] = useState<Post | null>(null);
