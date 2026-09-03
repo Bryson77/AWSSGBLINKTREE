@@ -1,77 +1,169 @@
-# AWS Student Builder Group (AWS SBG) — Monorepo
+# AWS Student Builder Group — Central Hub
 
-The official community portal and admin management system for the **AWS Student Builder Group (AWS SBG)**.
-
-AWS SBG is an official student-led community affiliated with, powered by, and supported by **Amazon Web Services (AWS)** across 60+ countries worldwide.
+The official online presence and community hub for **AWS Student Builder Group (SBG)**, an AWS-affiliated, student-led community delivering AWS Study Jams, Cloud Practitioner & Solutions Architect certification prep, and hackathons.
 
 ---
 
-## 🏗️ Monorepo Architecture
+## About AWS SBG
 
-This monorepo is structured using **npm workspaces**:
+**AWS Student Builder Group** is a student-led, student-maintained initiative powered and supported by **Amazon Web Services (AWS)**. We connect student developers, cloud enthusiasts, and future AWS builders through:
 
-```
-AWSSGBLINKTREE/
-├── apps/
-│   ├── web/           # Public Student Hub (https://awssbg.online)
-│   └── admin/         # Standalone Admin Portal (https://admin.awssbg.online)
-├── packages/
-│   └── shared/        # Shared types, Supabase client, SVG icon mappings
-└── package.json       # Monorepo root scripts & workspace configurations
-```
+- **Study Jams:** Structured learning paths for AWS certifications
+- **Certification Prep:** Cloud Practitioner & Solutions Architect exam preparation
+- **Hackathons:** Hands-on innovation challenges and community events
+- **Community Support:** Peer mentoring and collaborative learning
 
 ---
 
-## 🚀 Quick Start & Local Development
+## Tech Stack
 
-Install dependencies from the repository root:
+This project is built with a modern, full-stack architecture:
+
+- **Frontend:** Next.js (TypeScript/React) with Neo-Brutalist design system
+- **Backend:** Python microservices & API integrations
+- **Email:** Supabase Auth SMTP (server-side only)
+- **Hosting:** Cloudflare Pages
+- **Database:** Supabase (PostgreSQL)
+
+---
+
+## Design Philosophy: Hardcore Neo-Brutalism
+
+AWS SBG embraces a stark, mechanical aesthetic:
+
+- **Zero Rounded Corners:** `0px` razor-sharp geometry on all UI elements
+- **Bold Borders & Shadows:** `3px solid #000000` with `4px 4px 0px` offset drop shadows
+- **Limited Palette:** Pure Black, Pure White, AWS Electric Purple (`#7C3AED`), AWS Cyber Blue (`#2563EB`)
+- **Monochrome Icons:** Solid SVG via `react-icons`; no emojis
+- **Tactile Micro-interactions:** Left-to-right fill-slide hover sweeps, mechanical press feedback
+
+---
+
+## Key Features
+
+✓ **Official AWS Affiliation** — Built with AWS support  
+✓ **Community-Driven** — Student leadership & peer governance  
+✓ **Zero Data Sale** — Personal data is never sold, rented, or traded  
+✓ **Security-First** — Isolated admin portals, encrypted secrets, hardened headers  
+✓ **Accessible & Fast** — Optimized for performance and inclusive design  
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- Python 3.9+
+- Supabase account
+- Cloudflare account (for deployment)
+
+### Installation
+
 ```bash
+# Clone the repository
+git clone https://github.com/Bryson77/AWSSGBLINKTREE.git
+cd AWSSGBLINKTREE
+
+# Install dependencies
 npm install
+pip install -r requirements.txt
+
+# Run the development server
+npm run dev
+python api/main.py
 ```
 
-Start applications locally:
-* **Public Hub (`http://localhost:3000`):** `npm run dev:web`
-* **Admin Portal (`http://localhost:3001`):** `npm run dev:admin`
+Visit `http://localhost:3000` in your browser.
 
 ---
 
-## ⚡ Cloudflare Pages & Wrangler Deployments
+## Project Structure
 
-Each sub-application is configured for standalone static export and deployment via **Wrangler** to Cloudflare Pages.
+```
+.
+├── app/                    # Next.js app directory
+│   ├── page.tsx           # Homepage
+│   ├── layout.tsx         # Root layout
+│   └── api/               # API routes (server-side)
+├── components/            # React components (Neo-Brutalist UI)
+├── styles/                # Tailwind CSS & custom styles
+├── lib/                   # Utilities & shared logic
+├── api/                   # Python backend microservices
+│   ├── main.py           # FastAPI entry point
+│   └── routes/           # API endpoints
+├── public/                # Static assets
+└── README.md             # This file
+```
 
-### CLI Direct Deployments
+---
+
+## Security & Admin Portal
+
+The `/admin` portal and `admin.awssbg.online` are **dedicated standalone management systems**:
+
+- ✗ Never linked in public footers or navigation
+- ✗ Isolated authentication & authorization
+- ✓ Full audit logging
+- ✓ Role-based access control
+
+---
+
+## Deployment
+
+### Cloudflare Pages
+
 ```bash
-# Build & Deploy Public Site (awssbg-linktree -> awssbg.online)
-npm run deploy:web
-
-# Build & Deploy Admin Console (awssbg-admin -> admin.awssbg.online)
-npm run deploy:admin
-
-# Deploy Both Simultaneously
-npm run deploy:all
+npm run build
+npm run deploy
 ```
 
-### Cloudflare Dashboard Git CI/CD Settings
+Security headers are enforced via `_headers`:
 
-| Setting | `awssbg-linktree` (Public) | `awssbg-admin` (Admin) |
-| :--- | :--- | :--- |
-| **Framework Preset** | `None` | `None` |
-| **Build Command** | `npm run build:web` | `npm run build:admin` |
-| **Build Output Directory** | `apps/web/out` | `apps/admin/out` |
-| **Root Directory** | `/` (root) | `/` (root) |
-
----
-
-## 🤖 AI & LLM Scraping Integration
-
-The public hub is optimized for modern AI search engines, web scrapers, and Large Language Models:
-* **`llms.txt` & `llms-full.txt`:** Context files adhering to the `/llms.txt` standard for AI agents (ChatGPT, Claude, Perplexity).
-* **Robots Permissions:** Explicit allow directives for AI crawlers (`GPTBot`, `ClaudeBot`, `PerplexityBot`, `Google-Extended`, `Amazonbot`).
-* **Schema.org Structured Data:** Embedded JSON-LD schema declaring `EducationalOrganization` and `WebSite` metadata.
+```
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+```
 
 ---
 
-## 🛡️ Brand & Legal Compliance
-* **Official Affiliation:** Supported by and affiliated with Amazon Web Services (AWS).
-* **Zero Data Sale:** Personal data is strictly never sold, rented, or commercialized.
-* **Branding:** Refer to the site solely as **AWS SBG site** or **AWS Student Builder Group**.
+## Data Privacy
+
+**AWS Student Builder Group takes data privacy seriously:**
+
+- ✓ Zero data sale, rental, or trade
+- ✓ GDPR and CCPA compliant
+- ✓ Encrypted communication channels
+- ✓ Transparent privacy policy
+
+For details, see [PRIVACY.md](./PRIVACY.md).
+
+---
+
+## Support & Community
+
+- **Join us:** [awssbg.online](https://awssbg.online)
+- **Report issues:** [GitHub Issues](https://github.com/Bryson77/AWSSGBLINKTREE/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/Bryson77/AWSSGBLINKTREE/discussions)
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
+
+---
+
+## Acknowledgments
+
+**AWS Student Builder Group** is powered by:
+
+- ❤️ **Amazon Web Services (AWS)** — Official sponsorship & support
+- 🎓 **Student Leaders** — Building the community, one event at a time
+- 👥 **Community Members** — Learners, mentors, and builders
+
+---
+
+**Built with ⚡ and ♥️ by the AWS Student Builder Group community.**
