@@ -1,0 +1,28 @@
+name: Supabase Keep-Alive Ping
+
+on:
+  schedule:
+    # Run every 6 hours to prevent Supabase 7-day auto-pause on free tier
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    name: Ping Supabase Database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          echo "Pinging Supabase at $(date -u)..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            "${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://yzmgkreucvbftolijtpl.supabase.co' }}/rest/v1/orgs?select=id&limit=1")
+          
+          echo "HTTP Response Status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+            echo "Successfully pinged Supabase. Database is active."
+          else
+            echo "Warning: Received HTTP $HTTP_STATUS from Supabase."
+            exit 1
+          fi

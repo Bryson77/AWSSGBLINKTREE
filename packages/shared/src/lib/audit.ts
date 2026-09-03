@@ -5,7 +5,7 @@ export interface LogActivityParams {
   actor_id: string;
   actor_name: string;
   action: string;
-  entity_type: "link" | "post" | "team_member" | "org_settings" | "org" | "user" | "inquiry";
+  entity_type: "link" | "post" | "team_member" | "org_settings" | "org" | "user" | "inquiry" | "announcement";
   entity_id?: string | null;
   summary: string;
 }
@@ -20,7 +20,7 @@ export async function logActivity(
 ): Promise<void> {
   try {
     const { error } = await supabase.from("audit_log").insert({
-      org_id: params.org_id || null,
+      org_id: params.org_id && params.org_id !== "all" ? params.org_id : null,
       actor_id: params.actor_id,
       actor_name: params.actor_name,
       action: params.action,

@@ -15,6 +15,7 @@ import { BlogManager } from "../components/BlogManager";
 import { TeamPageManager } from "../components/TeamPageManager";
 import { OrgSettingsView } from "../components/OrgSettingsView";
 import { ActivityLogView } from "../components/ActivityLogView";
+import { AnnouncementManager } from "../components/AnnouncementManager";
 import {
   HiOutlineTrash,
   HiOutlinePencilSquare,
@@ -36,12 +37,12 @@ import {
   HiOutlineChevronRight,
   HiOutlineBars3,
   HiOutlineEye,
-  HiOutlineSparkles,
   HiOutlineDocumentText,
   HiOutlineUsers,
-  HiOutlineCog6Tooth,
   HiOutlineClock,
   HiOutlineBuildingOffice2,
+  HiOutlineMegaphone,
+  HiOutlineArrowDownTray,
 } from "react-icons/hi2";
 
 const PLATFORMS = [
@@ -693,6 +694,198 @@ function InviteUserModal({
   );
 }
 
+// ── Superadmin Add New SBG Onboarding Modal (§8.2) ──
+function AddNewSbgModal({
+  token,
+  onClose,
+  onOrgCreated,
+}: {
+  token: string;
+  onClose: () => void;
+  onOrgCreated: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [leaderName, setLeaderName] = useState("");
+  const [leaderEmail, setLeaderEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setName(val);
+    const autoSlug = val
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (!slug || slug === autoSlug.slice(0, slug.length)) {
+      setSlug(autoSlug);
+    }
+  };
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !slug.trim() || !leaderEmail.trim()) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/orgs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          slug: slug.trim().toLowerCase(),
+          leader_name: leaderName.trim() || leaderEmail.split("@")[0],
+          leader_email: leaderEmail.trim().toLowerCase(),
+        }),
+      });
+
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(text || `Server error (${res.status})`);
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to onboard new SBG chapter.");
+      }
+
+      toast.success(`AWS SBG @${slug.toUpperCase()} onboarded!`, {
+        description: `Leader invite sent to ${leaderEmail}.`,
+        action: data.inviteLink
+          ? {
+              label: "Copy Invite",
+              onClick: () => {
+                navigator.clipboard.writeText(data.inviteLink);
+                toast.success("Leader invite link copied!");
+              },
+            }
+          : undefined,
+      });
+
+      onOrgCreated();
+      onClose();
+    } catch (err) {
+      toast.error("SBG Onboarding Failed", {
+        description: (err as Error).message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-5 backdrop-blur-xs">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-lg space-y-4 border-[3px] border-black bg-white p-5 sm:p-6 shadow-[8px_8px_0px_#000000]"
+      >
+        <div className="border-b-2 border-black pb-3">
+          <div className="mb-1 inline-block border border-black bg-black px-2 py-0.5 font-mono text-[9px] font-black uppercase text-white shadow-[2px_2px_0px_#7C3AED]">
+            // CHAPTER_EXPANSION (§8.2)
+          </div>
+          <h2 className="text-xl font-black uppercase tracking-tight text-black">
+            Onboard New University SBG
+          </h2>
+          <p className="font-mono text-xs font-medium text-zinc-600">
+            Establish a new student chapter with its own links, blog, team page, and designated Leader.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+            University / Institution Name *
+          </label>
+          <input
+            type="text"
+            required
+            placeholder="e.g. University of Pretoria"
+            value={name}
+            onChange={handleNameChange}
+            className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+            Chapter URL Identifier (Slug) *
+          </label>
+          <div className="flex items-center">
+            <span className="border-2 border-r-0 border-black bg-zinc-100 px-2.5 py-2 font-mono text-xs font-bold text-zinc-600">
+              awssbg.online/
+            </span>
+            <input
+              type="text"
+              required
+              placeholder="up"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+              className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+            />
+          </div>
+          <span className="font-mono text-[10px] text-zinc-500 mt-1 block">
+            Only lowercase letters, numbers, and hyphens.
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+              Appointed Leader Name
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Kamohelo Molefe"
+              value={leaderName}
+              onChange={(e) => setLeaderName(e.target.value)}
+              className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+              Leader Email Address *
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="leader@university.edu"
+              value={leaderEmail}
+              onChange={(e) => setLeaderEmail(e.target.value)}
+              className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-sm text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED]"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 border-2 border-black bg-white px-4 py-2.5 font-mono text-xs font-bold uppercase text-black transition-colors hover:bg-zinc-200 cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] transition-all hover:bg-accent-purple disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? "Onboarding Chapter…" : "Launch Chapter & Invite Leader →"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 // ── Password Reset / Update Modal ──
 function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
   const [newPassword, setNewPassword] = useState("");
@@ -1116,13 +1309,14 @@ function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeView, setActiveView] = useState<
-    "dashboard" | "analytics" | "links" | "posts" | "team_page" | "settings" | "activity" | "inquiries" | "team"
+    "dashboard" | "analytics" | "links" | "posts" | "team_page" | "announcements" | "activity" | "inquiries" | "team"
   >("dashboard");
 
   // Modals state
   const [editing, setEditing] = useState<Partial<LinkItem> | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showAddOrgModal, setShowAddOrgModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showLivePreview, setShowLivePreview] = useState(false);
   const [selectedInquiry, setSelectedInquiry] = useState<InquiryItem | null>(null);
@@ -1270,6 +1464,49 @@ function Dashboard() {
       return matchesCategory && matchesStatus;
     });
   }, [inquiries, inquiryCategoryFilter, inquiryStatusFilter]);
+
+  const handleExportInquiriesCSV = async () => {
+    if (inquiries.length === 0) {
+      toast.error("No inquiries available to export.");
+      return;
+    }
+    const dataToExport = filteredInquiries.length > 0 ? filteredInquiries : inquiries;
+    const headers = ["ID", "Name", "Email", "Category", "Status", "Date Received", "Message"];
+    const escapeCell = (val: unknown) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+    const rows = dataToExport.map((item) => [
+      escapeCell(item.id),
+      escapeCell(item.name),
+      escapeCell(item.email),
+      escapeCell(item.category),
+      escapeCell(item.status),
+      escapeCell(new Date(item.created_at).toISOString()),
+      escapeCell(item.message),
+    ]);
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `inquiries_${selectedOrgId || "tut"}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Inquiries exported as CSV");
+
+    await logActivity(supabase, {
+      org_id: selectedOrgId || null,
+      actor_id: currentUserId,
+      actor_name: currentUserName || currentUserEmail,
+      action: "inquiries.exported",
+      entity_type: "inquiry",
+      summary: `Exported ${dataToExport.length} inquiries to CSV`,
+    });
+  };
 
   async function handleSaveLink(data: Partial<LinkItem>) {
     const targetOrgId = selectedOrgId || undefined;
@@ -1443,12 +1680,12 @@ function Dashboard() {
 
   const NAV_ITEMS = [
     { id: "dashboard", label: "Dashboard", icon: HiOutlineSquares2X2 },
-    { id: "links", label: `Links (${links.length})`, icon: HiOutlineLink },
-    { id: "posts", label: "Blog Posts", icon: HiOutlineDocumentText },
-    { id: "team_page", label: "Meet the Team", icon: HiOutlineUsers },
-    { id: "inquiries", label: "Inquiries", badge: unreadInquiriesCount, icon: HiOutlineEnvelope },
     { id: "analytics", label: "Analytics", icon: HiOutlineChartBar },
-    { id: "settings", label: "Group Settings", icon: HiOutlineCog6Tooth },
+    { id: "links", label: `Links (${links.length})`, icon: HiOutlineLink },
+    { id: "posts", label: "Blog", icon: HiOutlineDocumentText },
+    { id: "team_page", label: "Team Page", icon: HiOutlineUsers },
+    { id: "announcements", label: "Announcements", icon: HiOutlineMegaphone },
+    { id: "inquiries", label: "Inquiries", badge: unreadInquiriesCount, icon: HiOutlineEnvelope },
     { id: "activity", label: "Activity Log", icon: HiOutlineClock },
     { id: "team", label: "Users & Roles", icon: HiOutlineUserGroup },
   ] as const;
@@ -1510,7 +1747,15 @@ function Dashboard() {
                 <span className="font-mono text-[9px] font-black uppercase text-zinc-500">
                   Active SBG:
                 </span>
-                {!isSuperAdmin && (
+                {isSuperAdmin ? (
+                  <button
+                    onClick={() => setShowAddOrgModal(true)}
+                    className="font-mono text-[9px] font-black uppercase text-accent-purple hover:underline cursor-pointer"
+                    title="Onboard new university SBG chapter"
+                  >
+                    + Add SBG
+                  </button>
+                ) : (
                   <span className="flex items-center gap-0.5 font-mono text-[8px] font-bold text-zinc-500 uppercase">
                     Locked
                   </span>
@@ -2130,12 +2375,22 @@ function Dashboard() {
                       Submissions from awssbg.online/contact sent to lethabomabilo33@gmail.com.
                     </p>
                   </div>
-                  <button
-                    onClick={() => fetchInquiries(selectedOrgId)}
-                    className="border-2 border-black bg-white px-3 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
-                  >
-                    Refresh List
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleExportInquiriesCSV}
+                      className="flex items-center gap-1.5 border-2 border-black bg-black px-3.5 py-1.5 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#7C3AED] hover:bg-accent-purple active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+                      title="Download inquiries as CSV"
+                    >
+                      <HiOutlineArrowDownTray className="h-3.5 w-3.5" />
+                      <span>Export CSV</span>
+                    </button>
+                    <button
+                      onClick={() => fetchInquiries(selectedOrgId)}
+                      className="border-2 border-black bg-white px-3 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+                    >
+                      Refresh List
+                    </button>
+                  </div>
                 </div>
 
                 {/* Filters */}
@@ -2234,15 +2489,26 @@ function Dashboard() {
                       Role-based access management for AWS SBG student leaders.
                     </p>
                   </div>
-                  {isSuperAdmin && (
-                    <button
-                      onClick={() => setShowInviteModal(true)}
-                      className="inline-flex items-center justify-center gap-1.5 border-2 border-black bg-accent-purple px-3.5 py-2 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#000000] hover:bg-black cursor-pointer"
-                    >
-                      <HiOutlineUserPlus className="h-4 w-4" />
-                      <span>Invite Admin</span>
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => setShowAddOrgModal(true)}
+                        className="inline-flex items-center justify-center gap-1.5 border-2 border-black bg-black px-3.5 py-2 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#7C3AED] hover:bg-accent-purple active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+                      >
+                        <HiPlus className="h-4 w-4" />
+                        <span>Add New SBG</span>
+                      </button>
+                    )}
+                    {(isSuperAdmin || currentUserRole === "leader") && (
+                      <button
+                        onClick={() => setShowInviteModal(true)}
+                        className="inline-flex items-center justify-center gap-1.5 border-2 border-black bg-accent-purple px-3.5 py-2 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#000000] hover:bg-black active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+                      >
+                        <HiOutlineUserPlus className="h-4 w-4" />
+                        <span>Invite Admin</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -2296,7 +2562,41 @@ function Dashboard() {
                   </div>
                 ))}
               </div>
+
+              {/* Group Settings Sub-section embedded within Users & Roles */}
+              <div className="mt-8 pt-6 border-t-2 border-black/20">
+                <div className="mb-4">
+                  <div className="mb-1 inline-block border border-black bg-zinc-100 px-2 py-0.2 font-mono text-[9px] font-black uppercase text-black">
+                    // CHAPTER_SETTINGS
+                  </div>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-black">
+                    Chapter Settings &amp; Public Identity
+                  </h3>
+                  <p className="font-mono text-xs text-zinc-600 mt-0.5">
+                    Customize the public hero headlines, cover imagery, and official contact recipient.
+                  </p>
+                </div>
+                <OrgSettingsView
+                  currentOrgId={selectedOrgId}
+                  actorId={currentUserId}
+                  actorName={currentUserName || currentUserEmail}
+                  isSuperAdmin={isSuperAdmin}
+                  userRole={currentUserRole}
+                />
+              </div>
             </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW: ANNOUNCEMENTS */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "announcements" && (
+            <AnnouncementManager
+              currentOrgId={selectedOrgId}
+              actorId={currentUserId}
+              actorName={currentUserName || currentUserEmail}
+              isSuperAdmin={isSuperAdmin}
+            />
           )}
 
           {/* ═════════════════════════════════════════════════════════ */}
@@ -2323,18 +2623,6 @@ function Dashboard() {
             />
           )}
 
-          {/* ═════════════════════════════════════════════════════════ */}
-          {/* VIEW: GROUP SETTINGS */}
-          {/* ═════════════════════════════════════════════════════════ */}
-          {activeView === "settings" && (
-            <OrgSettingsView
-              currentOrgId={selectedOrgId}
-              actorId={currentUserId}
-              actorName={currentUserName || currentUserEmail}
-              isSuperAdmin={isSuperAdmin}
-              userRole={currentUserRole}
-            />
-          )}
 
           {/* ═════════════════════════════════════════════════════════ */}
           {/* VIEW: ACTIVITY LOG */}
@@ -2356,6 +2644,22 @@ function Dashboard() {
           onCancel={() => {
             setShowEditor(false);
             setEditing(null);
+          }}
+        />
+      )}
+
+      {showAddOrgModal && isSuperAdmin && (
+        <AddNewSbgModal
+          token={sessionToken}
+          onClose={() => setShowAddOrgModal(false)}
+          onOrgCreated={async () => {
+            const { data: orgsData } = await supabase
+              .from("orgs")
+              .select("*")
+              .order("name", { ascending: true });
+            if (orgsData) {
+              setOrgs(orgsData as Organization[]);
+            }
           }}
         />
       )}

@@ -5,8 +5,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import SitewideBanner from "@/components/SitewideBanner";
 import { toast } from "sonner";
-import { supabase } from "@awssbg/shared";
+import { supabase, Announcement } from "@awssbg/shared";
 import {
   HiArrowLeft,
   HiOutlineEnvelope,
@@ -55,6 +56,7 @@ export default function OrgContactClient() {
   const orgSlug = (params?.org as string) || "tut";
 
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [channels, setChannels] = useState(DEFAULT_CHANNELS);
   const [formData, setFormData] = useState({
     name: "",
@@ -75,6 +77,26 @@ export default function OrgContactClient() {
 
         if (orgData) {
           setOrgId(orgData.id);
+
+          // Query active announcement
+          const nowIso = new Date().toISOString();
+          const { data: annData } = await supabase
+            .from("announcements")
+            .select("*")
+            .eq("org_id", orgData.id)
+            .eq("is_active", true)
+            .lte("start_date", nowIso)
+            .order("start_date", { ascending: false });
+
+          if (annData && annData.length > 0) {
+            const activeItem = annData.find(
+              (a) => !a.end_date || new Date(a.end_date) >= new Date()
+            );
+            setAnnouncement(activeItem ? (activeItem as Announcement) : null);
+          } else {
+            setAnnouncement(null);
+          }
+
           const { data: linksData } = await supabase
             .from("links")
             .select("platform, url")
@@ -150,6 +172,7 @@ export default function OrgContactClient() {
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
       <Header />
+      <SitewideBanner announcement={announcement} orgSlug={orgSlug} />
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="mx-auto max-w-[680px]">

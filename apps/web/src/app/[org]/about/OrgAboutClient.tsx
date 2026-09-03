@@ -1,10 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { supabase, Announcement } from "@awssbg/shared";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import MeetTheTeam from "@/components/MeetTheTeam";
+import SitewideBanner from "@/components/SitewideBanner";
 import {
   HiArrowLeft,
   HiOutlineBolt,
@@ -65,10 +68,47 @@ const FAQS = [
 export default function OrgAboutClient() {
   const params = useParams();
   const orgSlug = (params?.org as string) || "tut";
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+
+  useEffect(() => {
+    async function loadAnnouncement() {
+      try {
+        const { data: orgData } = await supabase
+          .from("orgs")
+          .select("id")
+          .eq("slug", orgSlug)
+          .single();
+
+        if (orgData?.id) {
+          const nowIso = new Date().toISOString();
+          const { data: annData } = await supabase
+            .from("announcements")
+            .select("*")
+            .eq("org_id", orgData.id)
+            .eq("is_active", true)
+            .lte("start_date", nowIso)
+            .order("start_date", { ascending: false });
+
+          if (annData && annData.length > 0) {
+            const activeItem = annData.find(
+              (a) => !a.end_date || new Date(a.end_date) >= new Date()
+            );
+            setAnnouncement(activeItem ? (activeItem as Announcement) : null);
+          } else {
+            setAnnouncement(null);
+          }
+        }
+      } catch (err) {
+        console.error("Failed loading announcement in about:", err);
+      }
+    }
+    loadAnnouncement();
+  }, [orgSlug]);
 
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
       <Header />
+      <SitewideBanner announcement={announcement} orgSlug={orgSlug} />
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="mx-auto max-w-[680px]">

@@ -9,8 +9,8 @@ interface ImageUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (url: string) => void;
-  aspectRatio?: "1:1" | "16:9";
-  category?: "team" | "blog" | "hero" | "general";
+  aspectRatio?: "1:1" | "16:9" | "poster";
+  category?: "team" | "blog" | "hero" | "announcement" | "general";
   orgId?: string;
   title?: string;
 }
@@ -37,16 +37,28 @@ export function ImageUploadModal({
   const imageRef = useRef<HTMLImageElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Clean up object URL when image changes or unmounts
+  useEffect(() => {
+    return () => {
+      if (imageSrc && imageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(imageSrc);
+      }
+    };
+  }, [imageSrc]);
+
   // Reset when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
+      if (imageSrc && imageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(imageSrc);
+      }
       setImageSrc(null);
       setZoom(1);
       setPan({ x: 0, y: 0 });
       setIsDecoding(false);
       setIsUploading(false);
     }
-  }, [isOpen]);
+  }, [isOpen, imageSrc]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -116,15 +128,37 @@ export function ImageUploadModal({
 
   // Process crop & compress to WebP on client canvas
   const handleCropAndUpload = async () => {
-    if (!imageRef.current) return;
+    if (!imageRef.current || !imageRef.current.complete || imageRef.current.naturalWidth <= 0) {
+      toast.error("Image has not loaded yet. Please wait a moment.");
+      return;
+    }
 
     setIsUploading(true);
     const uploadToast = toast.loading("Compressing and uploading image...");
 
     try {
       const img = imageRef.current;
-      const targetWidth = aspectRatio === "16:9" ? 1280 : 800;
-      const targetHeight = aspectRatio === "16:9" ? 720 : 800;
+      const isPoster = aspectRatio === "poster";
+
+      let targetWidth = aspectRatio === "16:9" ? 1280 : 800;
+      let targetHeight = aspectRatio === "16:9" ? 720 : 800;
+
+      if (isPoster) {
+        // High fidelity poster: maintain native aspect ratio, max dimension 1920px
+        const maxDim = 1920;
+        if (img.naturalWidth > maxDim || img.naturalHeight > maxDim) {
+          if (img.naturalWidth > img.naturalHeight) {
+            targetWidth = maxDim;
+            targetHeight = Math.round((img.naturalHeight / img.naturalWidth) * maxDim);
+          } else {
+            targetHeight = maxDim;
+            targetWidth = Math.round((img.naturalWidth / img.naturalHeight) * maxDim);
+          }
+        } else {
+          targetWidth = img.naturalWidth;
+          targetHeight = img.naturalHeight;
+        }
+      }
 
       const canvas = document.createElement("canvas");
       canvas.width = targetWidth;
@@ -133,32 +167,40 @@ export function ImageUploadModal({
 
       if (!ctx) throw new Error("Could not initialize canvas rendering context.");
 
-      // Calculate source crop geometry based on zoom and pan
-      const frameAspect = targetWidth / targetHeight;
-      const imgAspect = img.naturalWidth / img.naturalHeight;
-
-      let drawWidth = targetWidth * zoom;
-      let drawHeight = targetHeight * zoom;
-
-      if (imgAspect > frameAspect) {
-        drawWidth = drawHeight * imgAspect;
+      if (isPoster) {
+        // High quality full image render without forced crop
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, targetWidth, targetHeight);
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
       } else {
-        drawHeight = drawWidth / imgAspect;
+        // Calculate source crop geometry based on zoom and pan
+        const frameAspect = targetWidth / targetHeight;
+        const imgAspect = img.naturalWidth / img.naturalHeight;
+
+        let drawWidth = targetWidth * zoom;
+        let drawHeight = targetHeight * zoom;
+
+        if (imgAspect > frameAspect) {
+          drawWidth = drawHeight * imgAspect;
+        } else {
+          drawHeight = drawWidth / imgAspect;
+        }
+
+        const drawX = (targetWidth - drawWidth) / 2 + pan.x * (targetWidth / 300);
+        const drawY = (targetHeight - drawHeight) / 2 + pan.y * (targetHeight / 300);
+
+        // Fill canvas background
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+        // Render image with pan and zoom applied
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
       }
 
-      const drawX = (targetWidth - drawWidth) / 2 + pan.x * (targetWidth / 300);
-      const drawY = (targetHeight - drawHeight) / 2 + pan.y * (targetHeight / 300);
-
-      // Fill canvas background
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, 0, targetWidth, targetHeight);
-
-      // Render image with pan and zoom applied
-      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-
-      // Export as WebP (target 300–500KB)
+      // Export as WebP (0.92 quality for posters to retain crisp typography, 0.85 for photos)
+      const quality = isPoster ? 0.92 : 0.85;
       const webpBlob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((b) => resolve(b), "image/webp", 0.85)
+        canvas.toBlob((b) => resolve(b), "image/webp", quality)
       );
 
       if (!webpBlob) throw new Error("Canvas WebP compression failed.");
@@ -251,56 +293,69 @@ export function ImageUploadModal({
               {/* Crop Frame */}
               <div className="flex flex-col items-center">
                 <div
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
+                  onMouseDown={aspectRatio === "poster" ? undefined : handleMouseDown}
+                  onMouseMove={aspectRatio === "poster" ? undefined : handleMouseMove}
+                  onMouseUp={aspectRatio === "poster" ? undefined : handleMouseUp}
+                  onMouseLeave={aspectRatio === "poster" ? undefined : handleMouseUp}
                   style={{
-                    aspectRatio: aspectRatio === "16:9" ? "16/9" : "1/1",
+                    aspectRatio: aspectRatio === "16:9" ? "16/9" : aspectRatio === "poster" ? "auto" : "1/1",
+                    maxHeight: aspectRatio === "poster" ? "360px" : undefined,
                   }}
-                  className="relative w-full max-w-[340px] overflow-hidden border-[3px] border-black bg-zinc-900 cursor-grab active:cursor-grabbing select-none"
+                  className={`relative w-full max-w-[340px] overflow-hidden border-[3px] border-black bg-zinc-900 select-none ${
+                    aspectRatio === "poster" ? "flex items-center justify-center p-1" : "cursor-grab active:cursor-grabbing"
+                  }`}
                 >
                   <img
                     ref={imageRef}
                     src={imageSrc}
                     alt="Upload preview"
                     style={{
-                      transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                      transform: aspectRatio === "poster" ? undefined : `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                       transformOrigin: "center center",
                     }}
-                    className="h-full w-full object-cover pointer-events-none transition-transform duration-75"
+                    className={`max-h-[350px] w-auto max-w-full pointer-events-none transition-transform duration-75 ${
+                      aspectRatio === "poster" ? "object-contain" : "h-full w-full object-cover"
+                    }`}
                   />
                   <div className="absolute top-2 right-2 border-2 border-black bg-black px-2 py-0.5 font-mono text-[9px] font-black uppercase text-white">
-                    {aspectRatio} CROP
+                    {aspectRatio === "poster" ? "POSTER (FULL)" : `${aspectRatio} CROP`}
                   </div>
                 </div>
-                <p className="mt-2 font-mono text-[10px] text-zinc-500 uppercase">
-                  Drag to pan &bull; Use slider below to zoom
-                </p>
+                {aspectRatio !== "poster" ? (
+                  <p className="mt-2 font-mono text-[10px] text-zinc-500 uppercase">
+                    Drag to pan &bull; Use slider below to zoom
+                  </p>
+                ) : (
+                  <p className="mt-2 font-mono text-[10px] text-zinc-500 uppercase">
+                    Full graphic preserved &bull; Crisp typography encoding
+                  </p>
+                )}
               </div>
 
-              {/* Zoom Controls */}
-              <div className="flex items-center gap-3 border-2 border-black bg-zinc-50 p-2">
-                <span className="font-mono text-[10px] font-black uppercase">Zoom:</span>
-                <input
-                  type="range"
-                  min="1"
-                  max="3"
-                  step="0.05"
-                  value={zoom}
-                  onChange={(e) => setZoom(parseFloat(e.target.value))}
-                  className="w-full accent-purple-600"
-                />
-                <button
-                  onClick={() => {
-                    setZoom(1);
-                    setPan({ x: 0, y: 0 });
-                  }}
-                  className="border border-black bg-white px-2 py-1 font-mono text-[9px] font-black uppercase hover:bg-zinc-100"
-                >
-                  Reset
-                </button>
-              </div>
+              {/* Zoom Controls (Non-poster only) */}
+              {aspectRatio !== "poster" && (
+                <div className="flex items-center gap-3 border-2 border-black bg-zinc-50 p-2">
+                  <span className="font-mono text-[10px] font-black uppercase">Zoom:</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="0.05"
+                    value={zoom}
+                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                    className="w-full accent-purple-600"
+                  />
+                  <button
+                    onClick={() => {
+                      setZoom(1);
+                      setPan({ x: 0, y: 0 });
+                    }}
+                    className="border border-black bg-white px-2 py-1 font-mono text-[9px] font-black uppercase hover:bg-zinc-100"
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -335,7 +390,7 @@ export function ImageUploadModal({
               ) : (
                 <>
                   <HiOutlineCheck className="h-4 w-4" />
-                  <span>Crop &amp; Upload</span>
+                  <span>{aspectRatio === "poster" ? "Upload Poster" : "Crop & Upload"}</span>
                 </>
               )}
             </button>

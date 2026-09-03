@@ -70,3 +70,75 @@ export const linkSchema = z.object({
   sort_order: z.number().int().min(0).default(0),
   is_active: z.boolean().default(true),
 });
+
+export const announcementSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    org_id: z.string().uuid("Invalid organization ID"),
+    title: z.string().min(2, "Title must be at least 2 characters").max(150, "Title cannot exceed 150 characters").trim(),
+    subtitle: z.string().max(250, "Subtitle cannot exceed 250 characters").nullable().optional().transform((v) => (!v ? null : v.trim())),
+    poster_image_url: z
+      .string()
+      .url("Invalid image URL")
+      .or(z.literal(""))
+      .nullable()
+      .optional()
+      .transform((v) => (!v ? null : v.trim())),
+    banner_text: z.string().min(2, "Banner text is required").max(150, "Banner text cannot exceed 150 characters").trim().default("We have an event coming up!"),
+    banner_bg_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Must be a valid 6-character hex color (e.g. #7C3AED)").default("#7C3AED"),
+    cta_label: z.string().min(1, "CTA label is required").max(50).trim().default("Learn More"),
+    cta_url: z
+      .string()
+      .max(500)
+      .refine(
+        (val) => !val || val.startsWith("/") || val.startsWith("https://") || val.startsWith("http://"),
+        "CTA URL must be a relative path or http/https URL"
+      )
+      .nullable()
+      .optional()
+      .transform((v) => (!v ? null : v.trim())),
+    start_date: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid start date"),
+    end_date: z
+      .string()
+      .refine((val) => !val || !isNaN(Date.parse(val)), "Invalid end date")
+      .nullable()
+      .optional()
+      .transform((v) => (!v ? null : v)),
+    is_active: z.boolean().default(true),
+  })
+  .refine(
+    (data) => {
+      if (data.start_date && data.end_date) {
+        return new Date(data.end_date) >= new Date(data.start_date);
+      }
+      return true;
+    },
+    {
+      message: "End date must be on or after the start date",
+      path: ["end_date"],
+    }
+  );
+
+export const updateAnnouncementSchema = z.object({
+  id: z.string().uuid("Invalid announcement ID"),
+  org_id: z.string().uuid("Invalid organization ID").optional(),
+  title: z.string().min(2).max(150).trim().optional(),
+  subtitle: z.string().max(250).nullable().optional().transform((v) => (!v ? null : v.trim())),
+  poster_image_url: z.string().url().or(z.literal("")).nullable().optional().transform((v) => (!v ? null : v.trim())),
+  banner_text: z.string().min(2).max(150).trim().optional(),
+  banner_bg_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  cta_label: z.string().min(1).max(50).trim().optional(),
+  cta_url: z
+    .string()
+    .max(500)
+    .refine((val) => !val || val.startsWith("/") || val.startsWith("https://") || val.startsWith("http://"))
+    .nullable()
+    .optional()
+    .transform((v) => (!v ? null : v.trim())),
+  start_date: z.string().refine((val) => !isNaN(Date.parse(val))).optional(),
+  end_date: z.string().refine((val) => !val || !isNaN(Date.parse(val))).nullable().optional().transform((v) => (!v ? null : v)),
+  is_active: z.boolean().optional(),
+});
+
+export type CreateAnnouncementInput = z.infer<typeof announcementSchema>;
+export type UpdateAnnouncementInput = z.infer<typeof updateAnnouncementSchema>;

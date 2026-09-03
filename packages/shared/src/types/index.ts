@@ -53,10 +53,27 @@ export interface AuditLogEntry {
   actor_id: string;
   actor_name: string;
   action: string;
-  entity_type: "link" | "post" | "team_member" | "org_settings" | "org" | "user" | "inquiry";
+  entity_type: "link" | "post" | "team_member" | "org_settings" | "org" | "user" | "inquiry" | "announcement";
   entity_id: string | null;
   summary: string;
   created_at: string;
+}
+
+export interface Announcement {
+  id: string;
+  org_id: string;
+  title: string;
+  subtitle?: string | null;
+  poster_image_url?: string | null;
+  banner_text: string;
+  banner_bg_color: string;
+  cta_label: string;
+  cta_url?: string | null;
+  start_date: string;
+  end_date?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AdminUser {

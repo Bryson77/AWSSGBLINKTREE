@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { supabase, Post } from "@awssbg/shared";
+import SitewideBanner from "@/components/SitewideBanner";
+import { supabase, Post, Announcement } from "@awssbg/shared";
 import {
   HiArrowLeft,
   HiOutlineCalendar,
@@ -19,10 +20,11 @@ export default function OrgBlogClient() {
   const orgSlug = (params?.org as string) || "tut";
 
   const [posts, setPosts] = useState<Post[]>([]);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadPosts() {
+    async function loadData() {
       try {
         const { data: orgData } = await supabase
           .from("orgs")
@@ -31,6 +33,25 @@ export default function OrgBlogClient() {
           .single();
 
         if (orgData) {
+          // Load announcement
+          const nowIso = new Date().toISOString();
+          const { data: annData } = await supabase
+            .from("announcements")
+            .select("*")
+            .eq("org_id", orgData.id)
+            .eq("is_active", true)
+            .lte("start_date", nowIso)
+            .order("start_date", { ascending: false });
+
+          if (annData && annData.length > 0) {
+            const activeItem = annData.find(
+              (a) => !a.end_date || new Date(a.end_date) >= new Date()
+            );
+            setAnnouncement(activeItem ? (activeItem as Announcement) : null);
+          } else {
+            setAnnouncement(null);
+          }
+
           const { data, error } = await supabase
             .from("posts")
             .select("*")
@@ -49,7 +70,7 @@ export default function OrgBlogClient() {
       }
     }
 
-    loadPosts();
+    loadData();
   }, [orgSlug]);
 
   const calculateReadingTime = (content: string) => {
@@ -70,6 +91,7 @@ export default function OrgBlogClient() {
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
       <Header />
+      <SitewideBanner announcement={announcement} orgSlug={orgSlug} />
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="mx-auto max-w-[720px]">
@@ -127,7 +149,7 @@ export default function OrgBlogClient() {
                       <img
                         src={post.cover_image_url}
                         alt={post.title}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                       />
                     </div>
                   )}

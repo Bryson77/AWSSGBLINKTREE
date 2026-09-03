@@ -5,9 +5,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { supabase, Post } from "@awssbg/shared";
+import SitewideBanner from "@/components/SitewideBanner";
+import { supabase, Post, Announcement, sanitizeContent } from "@awssbg/shared";
 import { marked } from "marked";
-import { sanitizeContent } from "@awssbg/shared";
 import {
   HiArrowLeft,
   HiOutlineCalendar,
@@ -22,6 +22,7 @@ export default function OrgBlogPostClient() {
   const slug = params?.slug as string;
 
   const [post, setPost] = useState<Post | null>(null);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
   const [htmlContent, setHtmlContent] = useState("");
 
@@ -37,6 +38,25 @@ export default function OrgBlogPostClient() {
           .single();
 
         if (orgData) {
+          // Load announcement
+          const nowIso = new Date().toISOString();
+          const { data: annData } = await supabase
+            .from("announcements")
+            .select("*")
+            .eq("org_id", orgData.id)
+            .eq("is_active", true)
+            .lte("start_date", nowIso)
+            .order("start_date", { ascending: false });
+
+          if (annData && annData.length > 0) {
+            const activeItem = annData.find(
+              (a) => !a.end_date || new Date(a.end_date) >= new Date()
+            );
+            setAnnouncement(activeItem ? (activeItem as Announcement) : null);
+          } else {
+            setAnnouncement(null);
+          }
+
           const { data, error } = await supabase
             .from("posts")
             .select("*")
@@ -101,6 +121,7 @@ export default function OrgBlogPostClient() {
     return (
       <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
         <Header />
+        <SitewideBanner announcement={announcement} orgSlug={orgSlug} />
         <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
           <div className="mx-auto max-w-[720px]">
             <div className="h-96 w-full animate-pulse border-[3px] border-black bg-zinc-200 shadow-[6px_6px_0px_#000000]" />
@@ -115,6 +136,7 @@ export default function OrgBlogPostClient() {
     return (
       <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
         <Header />
+        <SitewideBanner announcement={announcement} orgSlug={orgSlug} />
         <main className="flex-1 px-4 sm:px-6 py-12">
           <div className="mx-auto max-w-[600px] border-[3px] border-black bg-white p-8 text-center shadow-[6px_6px_0px_#000000]">
             <h1 className="text-xl font-black uppercase text-black">Article Not Found</h1>
@@ -140,6 +162,7 @@ export default function OrgBlogPostClient() {
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
       <Header />
+      <SitewideBanner announcement={announcement} orgSlug={orgSlug} />
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <article className="mx-auto max-w-[720px]">
@@ -206,8 +229,8 @@ export default function OrgBlogPostClient() {
                 [&>pre]:border-2 [&>pre]:border-black [&>pre]:bg-zinc-950 [&>pre]:text-purple-300 [&>pre]:p-4 [&>pre]:overflow-x-auto [&>pre]:my-4 [&>pre]:font-mono [&>pre]:text-xs
                 [&>code]:bg-zinc-100 [&>code]:border [&>code]:border-black [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:font-mono [&>code]:text-xs [&>code]:text-purple-800
                 [&>table]:w-full [&>table]:border-collapse [&>table]:border-2 [&>table]:border-black [&>table]:my-4
-                [&>table_th]:border-2 [&>table_th]:border-black [&>table_th]:bg-black [&>table_th]:text-white [&>table_th]:p-2 [&>table_th]:font-mono [&>table_th]:text-xs [&>table_th]:uppercase
-                [&>table_td]:border-2 [&>table_td]:border-black [&>table_td]:p-2 [&>table_td]:font-mono [&>table_td]:text-xs"
+                [&_th]:border-2 [&_th]:border-black [&_th]:bg-black [&_th]:text-white [&_th]:p-2 [&_th]:font-mono [&_th]:text-xs [&_th]:uppercase
+                [&_td]:border-2 [&_td]:border-black [&_td]:p-2 [&_td]:font-mono [&_td]:text-xs"
               dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
 
