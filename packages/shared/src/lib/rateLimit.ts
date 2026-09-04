@@ -17,6 +17,10 @@ export const RATE_LIMIT_RULES = {
   UPLOAD: { windowMs: 10 * 60 * 1000, maxRequests: 15 },
   // General write mutations: 60 per minute
   WRITES: { windowMs: 60 * 1000, maxRequests: 60 },
+  // Fast QR Scanner check-ins / leads: 120 per minute
+  SCANNER: { windowMs: 60 * 1000, maxRequests: 120 },
+  // General reads / counts: 60 per minute
+  READS: { windowMs: 60 * 1000, maxRequests: 60 },
   // Public link clicks: 30 per minute
   CLICKS: { windowMs: 60 * 1000, maxRequests: 30 },
 } as const;

@@ -172,3 +172,88 @@ export const updateAnnouncementSchema = z.object({
 
 export type CreateAnnouncementInput = z.infer<typeof announcementSchema>;
 export type UpdateAnnouncementInput = z.infer<typeof updateAnnouncementSchema>;
+
+// ── Event Platform & Logistics Zod Schemas ──
+
+export const eventSchema = z.object({
+  id: z.string().uuid().optional(),
+  org_id: z.string().uuid("Invalid organization ID"),
+  slug: z
+    .string()
+    .min(2, "Slug must be at least 2 characters")
+    .max(100, "Slug cannot exceed 100 characters")
+    .regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase alphanumeric characters and hyphens")
+    .trim(),
+  title: z.string().min(3, "Title must be at least 3 characters").max(150, "Title cannot exceed 150 characters").trim(),
+  subtitle: z.string().max(250).nullable().optional().transform((v) => (!v ? null : v.trim())),
+  venue_name: z.string().min(2, "Venue name is required").max(200).trim(),
+  start_time: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid start time"),
+  end_time: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid end time"),
+  poster_url: z.string().url("Invalid image URL").or(z.literal("")).nullable().optional().transform((v) => (!v ? null : v.trim())),
+  banner_url: z.string().url("Invalid image URL").or(z.literal("")).nullable().optional().transform((v) => (!v ? null : v.trim())),
+  capacity_limit: z.number().int().min(1).default(500),
+  waitlist_enabled: z.boolean().default(true),
+  status: z.enum(["draft", "published_open", "waitlist_only", "registration_closed", "live_checkin", "concluded_archived"]).default("draft"),
+  queue_count: z.number().int().min(1).max(10).default(4),
+  queues_locked: z.boolean().default(false),
+});
+
+export const eventFormConfigSchema = z.object({
+  event_id: z.string().uuid("Invalid event ID"),
+  include_student_id: z.boolean().default(true),
+  include_tshirt_size: z.boolean().default(true),
+  include_dietary: z.boolean().default(true),
+  custom_fields: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string().min(1, "Question label is required"),
+        type: z.enum(["text", "textarea", "select", "radio", "checkbox"]),
+        options: z.array(z.string()).optional(),
+        required: z.boolean().default(false),
+      })
+    )
+    .default([]),
+  popia_consent_text: z.string().min(10, "Consent disclosure is required").default("I consent to having my professional contact info shared with official event sponsors upon badge scan at their booths in accordance with POPIA."),
+});
+
+export const eventRegistrationSchema = z.object({
+  event_id: z.string().uuid("Invalid event ID"),
+  first_name: z.string().min(1, "First name is required").max(60).trim(),
+  last_name: z.string().min(1, "Last name is required").max(60).trim(),
+  email: z.string().email("Valid email address is required").max(255).trim().toLowerCase(),
+  affiliation_type: z.enum(["student", "industry"]).default("student"),
+  affiliation_detail: z.string().min(2, "Course or Industry details required").max(150).trim(),
+  student_id: z.string().max(50).nullable().optional().transform((v) => (!v ? null : v.trim())),
+  tshirt_size: z.string().max(10).nullable().optional(),
+  dietary_requirements: z.string().max(200).nullable().optional().transform((v) => (!v ? null : v.trim())),
+  custom_responses: z.record(z.string(), z.any()).default({}),
+  popia_consent_given: z.boolean().refine((val) => val === true, "You must consent to POPIA data processing terms"),
+});
+
+export const sponsorCompanySchema = z.object({
+  id: z.string().uuid().optional(),
+  event_id: z.string().uuid("Invalid event ID"),
+  name: z.string().min(2, "Sponsor name is required").max(100).trim(),
+  tier: z.enum(["title", "platinum", "gold", "community"]).default("community"),
+  logo_url: z.string().url().or(z.literal("")).nullable().optional().transform((v) => (!v ? null : v.trim())),
+  lead_fields: z.array(z.string()).default(["name", "email", "affiliation", "linkedin"]),
+});
+
+export const sponsorLeadScanSchema = z.object({
+  event_id: z.string().uuid("Invalid event ID"),
+  sponsor_company_id: z.string().uuid("Invalid sponsor company ID"),
+  qr_token: z.string().min(10, "Valid ticket QR token required").trim(),
+  rating: z.number().int().min(1).max(5).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+});
+
+export const checkinScanSchema = z.object({
+  event_id: z.string().uuid("Invalid event ID"),
+  qr_token: z.string().min(10, "Valid ticket QR token required").trim(),
+  allow_override: z.boolean().default(false),
+});
+
+export type EventInput = z.infer<typeof eventSchema>;
+export type EventRegistrationInput = z.infer<typeof eventRegistrationSchema>;
+

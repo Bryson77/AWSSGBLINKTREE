@@ -16,12 +16,14 @@ import { TeamPageManager } from "../components/TeamPageManager";
 import { OrgSettingsView } from "../components/OrgSettingsView";
 import { ActivityLogView } from "../components/ActivityLogView";
 import { AnnouncementManager } from "../components/AnnouncementManager";
+import { EventsManager } from "../components/EventsManager";
 import {
   HiOutlineTrash,
   HiOutlinePencilSquare,
   HiOutlineArrowUp,
   HiOutlineArrowDown,
   HiPlus,
+  HiOutlineTicket,
   HiOutlineUserGroup,
   HiOutlineKey,
   HiOutlineCheck,
@@ -1309,7 +1311,7 @@ function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeView, setActiveView] = useState<
-    "dashboard" | "analytics" | "links" | "posts" | "team_page" | "announcements" | "activity" | "inquiries" | "team"
+    "dashboard" | "analytics" | "links" | "posts" | "team_page" | "announcements" | "events" | "activity" | "inquiries" | "team"
   >("dashboard");
 
   // Modals state
@@ -1684,6 +1686,7 @@ function Dashboard() {
     { id: "posts", label: "Blog", icon: HiOutlineDocumentText },
     { id: "team_page", label: "Team Page", icon: HiOutlineUsers },
     { id: "announcements", label: "Announcements", icon: HiOutlineMegaphone },
+    { id: "events", label: "Events & Passes", icon: HiOutlineTicket },
     { id: "inquiries", label: "Inquiries", badge: unreadInquiriesCount, icon: HiOutlineEnvelope },
     { id: "activity", label: "Activity Log", icon: HiOutlineClock },
     { id: "team", label: "Users & Roles", icon: HiOutlineUserGroup },
@@ -2595,6 +2598,19 @@ function Dashboard() {
               actorId={currentUserId}
               actorName={currentUserName || currentUserEmail}
               isSuperAdmin={isSuperAdmin}
+            />
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* VIEW: EVENTS & TICKETING LOGISTICS */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {activeView === "events" && (
+            <EventsManager
+              currentOrgId={selectedOrgId}
+              actorId={currentUserId}
+              actorName={currentUserName || currentUserEmail}
+              isSuperAdmin={isSuperAdmin}
+              token={sessionToken}
             />
           )}
 

@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/*
+ * AWS SBG Events Platform — Operational Console Theme
+ * Geometry: 0px sharp corners, 3px solid black borders, hard offset drop shadows.
+ * Colors: Pure Black (#000000), White (#FFFFFF), AWS Electric Purple (#7C3AED), AWS Cyber Blue (#2563EB).
+ */
+
+@theme {
+  --color-bg-base: #F4F4F5;
+  --color-bg-card: #FFFFFF;
+  --color-border-brutal: #000000;
+  --color-shadow-brutal: #000000;
+
+  /* Primary */
+  --color-primary-black: #000000;
+  --color-primary-white: #FFFFFF;
+
+  /* Accents */
+  --color-accent-purple: #7C3AED;
+  --color-accent-purple-light: #8B5CF6;
+  --color-accent-blue: #2563EB;
+  --color-accent-blue-light: #3B82F6;
+
+  /* Status */
+  --color-status-success: #10B981;
+  --color-status-warning: #F59E0B;
+  --color-status-danger: #EF4444;
+
+  /* Text */
+  --color-text-primary: #000000;
+  --color-text-secondary: #3F3F46;
+  --color-text-muted: #71717A;
+  --color-focus-ring: #7C3AED;
+}
+
+/* ── Base Invariants ───────────────────────────── */
+
+*, ::before, ::after {
+  border-radius: 0px !important;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: #F4F4F5;
+}
+
+body {
+  background-color: #F4F4F5;
+  color: #000000;
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading, "Montserrat", sans-serif);
+  letter-spacing: -0.03em;
+}
+
+/* ── Neo-Brutalist Background Pattern ─────────── */
+
+.brutal-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}

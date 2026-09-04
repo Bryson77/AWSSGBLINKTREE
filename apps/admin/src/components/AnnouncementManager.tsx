@@ -85,6 +85,8 @@ export function AnnouncementManager({
   const [showImageModal, setShowImageModal] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<"form" | "preview">("form");
 
+  const [availableEvents, setAvailableEvents] = useState<{ id: string; title: string; slug: string }[]>([]);
+
   const fetchAnnouncements = useCallback(async () => {
     setLoading(true);
     try {
@@ -106,6 +108,22 @@ export function AnnouncementManager({
   useEffect(() => {
     fetchAnnouncements();
   }, [fetchAnnouncements]);
+
+  useEffect(() => {
+    async function loadEvents() {
+      try {
+        let q = supabase.from("events").select("id, title, slug");
+        if (currentOrgId && currentOrgId !== "all") {
+          q = q.eq("org_id", currentOrgId);
+        }
+        const { data } = await q;
+        if (data) setAvailableEvents(data);
+      } catch (err) {
+        console.error("Failed loading events for announcement links:", err);
+      }
+    }
+    loadEvents();
+  }, [currentOrgId]);
 
   const handleCreateNew = () => {
     const nowLocal = toLocalDatetimeValue(new Date().toISOString());
@@ -748,6 +766,50 @@ export function AnnouncementManager({
                         <span>Add Link</span>
                       </button>
                     </div>
+
+                    {availableEvents.length > 0 && (
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-2 border-black bg-purple-50 p-2.5 shadow-[2px_2px_0px_#000000]">
+                        <span className="font-mono text-[10px] font-black uppercase text-accent-purple shrink-0">
+                          // QUICK_LINK_TO_EVENT:
+                        </span>
+                        <select
+                          onChange={(e) => {
+                            const selected = availableEvents.find((ev) => ev.slug === e.target.value);
+                            if (selected) {
+                              const regUrl = `https://awssbg.online/events/${selected.slug}`;
+                              const currentLinks = editingItem?.links ? [...editingItem.links] : [];
+                              if (!currentLinks.some((l) => l.url === regUrl)) {
+                                setEditingItem({
+                                  ...editingItem,
+                                  links: [
+                                    ...currentLinks,
+                                    {
+                                      title: `Register: ${selected.title}`,
+                                      platform: "website",
+                                      url: regUrl,
+                                    },
+                                  ],
+                                  cta_label: editingItem?.cta_label || "Register Now",
+                                  cta_url: editingItem?.cta_url || regUrl,
+                                });
+                                toast.success(`Linked registration for "${selected.title}"!`);
+                              } else {
+                                toast.info("This event registration link is already added.");
+                              }
+                            }
+                          }}
+                          defaultValue=""
+                          className="flex-1 border-2 border-black bg-white px-2 py-1.5 font-mono text-xs font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED] cursor-pointer"
+                        >
+                          <option value="" disabled>-- Select an Event Form to Add Button --</option>
+                          {availableEvents.map((ev) => (
+                            <option key={ev.id} value={ev.slug}>
+                              {ev.title} (/events/{ev.slug})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
 
                     {(!editingItem.links || editingItem.links.length === 0) ? (
                       <div className="border-2 border-dashed border-black/30 bg-white p-4 text-center">
