@@ -36,3 +36,7 @@ Thumbs.db
 docs/
 /docs/
 
+# Cloudflare / Wrangler
+.wrangler/
+_worker.bundle
+
