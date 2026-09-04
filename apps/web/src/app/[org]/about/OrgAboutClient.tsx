@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, Announcement } from "@awssbg/shared";
 import Header from "@/components/Header";
@@ -67,12 +67,21 @@ const FAQS = [
 
 export default function OrgAboutClient() {
   const params = useParams();
+  const router = useRouter();
   const orgSlug = (params?.org as string) || "";
+  const [shouldRender, setShouldRender] = useState(false);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
 
   useEffect(() => {
     async function loadAnnouncement() {
       try {
+        const { data: allOrgs } = await supabase.from("orgs").select("id");
+        if (!allOrgs || allOrgs.length <= 1) {
+          router.replace("/about");
+          return;
+        }
+        setShouldRender(true);
+
         const { data: orgData } = await supabase
           .from("orgs")
           .select("id")
@@ -100,10 +109,13 @@ export default function OrgAboutClient() {
         }
       } catch (err) {
         console.error("Failed loading announcement in about:", err);
+        setShouldRender(true);
       }
     }
     loadAnnouncement();
-  }, [orgSlug]);
+  }, [orgSlug, router]);
+
+  if (!shouldRender) return null;
 
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">

@@ -82,7 +82,7 @@ export default function MeetTheTeam({ orgSlug }: MeetTheTeamProps) {
           Meet The Team
         </h2>
         <p className="mt-1 font-mono text-xs font-bold uppercase text-purple-700">
-          AWS SBG @{orgSlug.toUpperCase()}
+          AWS SBG {orgSlug ? `@${orgSlug.toUpperCase()}` : "Leadership"}
         </p>
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -53,8 +53,10 @@ const CATEGORIES = [
 
 export default function OrgContactClient() {
   const params = useParams();
+  const router = useRouter();
   const orgSlug = (params?.org as string) || "";
 
+  const [shouldRender, setShouldRender] = useState(false);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [channels, setChannels] = useState(DEFAULT_CHANNELS);
@@ -69,6 +71,13 @@ export default function OrgContactClient() {
   useEffect(() => {
     async function loadOrgAndChannels() {
       try {
+        const { data: allOrgs } = await supabase.from("orgs").select("id");
+        if (!allOrgs || allOrgs.length <= 1) {
+          router.replace("/contact");
+          return;
+        }
+        setShouldRender(true);
+
         const { data: orgData } = await supabase
           .from("orgs")
           .select("id")
@@ -120,7 +129,7 @@ export default function OrgContactClient() {
     }
 
     loadOrgAndChannels();
-  }, [orgSlug]);
+  }, [orgSlug, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,6 +177,8 @@ export default function OrgContactClient() {
       setSubmitting(false);
     }
   };
+
+  if (!shouldRender) return null;
 
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">

@@ -104,7 +104,7 @@ export default function SitewideBanner({
 
   return (
     <aside
-      style={{ backgroundColor: announcement.banner_bg_color || "#7C3AED" }}
+      style={{ backgroundColor: activeAnnouncement.banner_bg_color || "#7C3AED" }}
       className="border-b-[3px] border-black text-white relative z-40 transition-all"
       aria-label="Community Announcement"
     >
@@ -115,7 +115,7 @@ export default function SitewideBanner({
             <HiOutlineCalendarDays className="h-3.5 w-3.5" />
           </div>
           <span className="font-mono text-xs sm:text-sm font-black uppercase tracking-tight truncate text-white drop-shadow-[1px_1px_0px_#000000]">
-            {announcement.banner_text || "We have an event coming up!"}
+            {activeAnnouncement.banner_text || "We have an event coming up!"}
           </span>
         </div>
 
@@ -127,7 +127,7 @@ export default function SitewideBanner({
             rel={isExternal ? "noopener noreferrer" : undefined}
             className="inline-flex items-center gap-1.5 border-2 border-black bg-white px-3 py-1 font-mono text-[11px] font-black uppercase text-black shadow-[2px_2px_0px_#000000] hover:bg-black hover:text-white active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all no-underline"
           >
-            <span>{announcement.cta_label || "Learn More"}</span>
+            <span>{activeAnnouncement.cta_label || "Learn More"}</span>
             <HiOutlineArrowTopRightOnSquare className="h-3 w-3" />
           </a>
 

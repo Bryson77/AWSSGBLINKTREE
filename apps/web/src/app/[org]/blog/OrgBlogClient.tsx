@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SitewideBanner from "@/components/SitewideBanner";
@@ -17,7 +17,9 @@ import {
 
 export default function OrgBlogClient() {
   const params = useParams();
+  const router = useRouter();
   const orgSlug = (params?.org as string) || "";
+  const [shouldRender, setShouldRender] = useState(false);
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
@@ -26,6 +28,13 @@ export default function OrgBlogClient() {
   useEffect(() => {
     async function loadData() {
       try {
+        const { data: allOrgs } = await supabase.from("orgs").select("id");
+        if (!allOrgs || allOrgs.length <= 1) {
+          router.replace("/blog");
+          return;
+        }
+        setShouldRender(true);
+
         const { data: orgData } = await supabase
           .from("orgs")
           .select("id")
@@ -71,7 +80,9 @@ export default function OrgBlogClient() {
     }
 
     loadData();
-  }, [orgSlug]);
+  }, [orgSlug, router]);
+
+  if (!shouldRender) return null;
 
   const calculateReadingTime = (content: string) => {
     const words = content.trim().split(/\s+/).length;

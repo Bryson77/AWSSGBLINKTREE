@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase, Announcement } from "@awssbg/shared";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
@@ -11,7 +11,9 @@ import Footer from "@/components/Footer";
 
 export default function OrgHomeClient() {
   const params = useParams();
+  const router = useRouter();
   const orgSlug = (params?.org as string) || "";
+  const [shouldRender, setShouldRender] = useState(false);
 
   const [settings, setSettings] = useState<{
     hero_title?: string;
@@ -24,6 +26,13 @@ export default function OrgHomeClient() {
   useEffect(() => {
     async function loadData() {
       try {
+        const { data: allOrgs } = await supabase.from("orgs").select("id");
+        if (!allOrgs || allOrgs.length <= 1) {
+          router.replace("/");
+          return;
+        }
+        setShouldRender(true);
+
         const { data: orgData } = await supabase
           .from("orgs")
           .select("id")
@@ -63,7 +72,9 @@ export default function OrgHomeClient() {
       }
     }
     loadData();
-  }, [orgSlug]);
+  }, [orgSlug, router]);
+
+  if (!shouldRender) return null;
 
   return (
     <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
