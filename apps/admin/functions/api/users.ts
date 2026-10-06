@@ -56,14 +56,14 @@ function buildAdminInviteEmail(data: {
             <tr><td style="padding: 4px 0;"><strong>Console URL:</strong> https://admin.awssbg.online</td></tr>
           </table>
           <p style="margin: 0 0 16px 0; font-size: 13px; color: #52525B;">
-            Click the button below to accept your invitation, verify your credentials, and configure your password.
+            Click the button below to accept your invitation and create your new password. Once your password is saved, you will sign in to enter the AWS SBG Admin Console.
           </p>
         </td></tr>
         <tr><td align="center" style="padding-bottom: 24px;">
           <table border="0" cellpadding="0" cellspacing="0" width="100%">
             <tr><td align="center">
               <a href="${data.actionLink}" target="_blank" style="display: block; background-color: #000000; color: #FFFFFF; border: 2px solid #000000; box-shadow: 4px 4px 0px #7C3AED; font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; padding: 14px 20px; text-align: center;">
-                ACCEPT INVITATION &rarr;
+                SET NEW PASSWORD & SIGN IN &rarr;
               </a>
             </td></tr>
           </table>
@@ -104,14 +104,14 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
       status: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     });
   }
 
-  // Enforce rate limiting on write endpoints (POST/DELETE)
-  if (request.method === "POST" || request.method === "DELETE") {
+  // Enforce rate limiting on write endpoints (POST/PATCH/DELETE)
+  if (request.method === "POST" || request.method === "PATCH" || request.method === "DELETE") {
     const rateLimitError = enforceRateLimit(request, "users_auth", RATE_LIMIT_RULES.AUTH);
     if (rateLimitError) return rateLimitError;
   }
@@ -208,11 +208,134 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
   if (request.method === "POST") {
     try {
       const body = (await request.json()) as {
-        email: string;
-        name: string;
+        action?: string;
+        userId?: string;
+        email?: string;
+        name?: string;
         role?: string;
         org_id?: string;
       };
+
+      // ── Handle Action: Resend Invite ──
+      if (body.action === "resend" || (body as any).resend) {
+        const { userId, email: resendEmail } = body;
+        let targetUser: any = null;
+        if (userId) {
+          const { data } = await supabaseAdmin.from("admin_users").select("*").eq("id", userId).single();
+          targetUser = data;
+        } else if (resendEmail) {
+          const { data } = await supabaseAdmin.from("admin_users").select("*").eq("email", resendEmail.toLowerCase().trim()).single();
+          targetUser = data;
+        }
+
+        if (!targetUser) {
+          return new Response(JSON.stringify({ error: "User not found to resend invite." }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        if (!isSuperAdmin) {
+          if (targetUser.org_id !== callerProfile?.org_id) {
+            return new Response(JSON.stringify({ error: "Forbidden: Cannot resend invite to member of another group." }), {
+              status: 403,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+        }
+
+        const redirectUrl = "https://admin.awssbg.online/update-password";
+        let actionLink = "";
+        const { data: recData, error: recError } = await supabaseAdmin.auth.admin.generateLink({
+          type: "recovery",
+          email: targetUser.email,
+          options: { redirectTo: redirectUrl },
+        });
+
+        if (recError || !recData) {
+          const { data: invData, error: invError } = await supabaseAdmin.auth.admin.generateLink({
+            type: "invite",
+            email: targetUser.email,
+            options: {
+              redirectTo: redirectUrl,
+              data: {
+                name: targetUser.name,
+                role: targetUser.role,
+                org_id: targetUser.org_id,
+              },
+            },
+          });
+          if (invError || !invData) {
+            return new Response(
+              JSON.stringify({ error: invError?.message || recError?.message || "Failed to generate invite link." }),
+              { status: 400, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          actionLink = invData.properties.action_link;
+        } else {
+          actionLink = recData.properties.action_link;
+        }
+
+        let orgName: string | undefined;
+        if (targetUser.org_id) {
+          const { data: orgData } = await supabaseAdmin.from("orgs").select("name").eq("id", targetUser.org_id).single();
+          orgName = orgData?.name;
+        }
+
+        let emailDispatched = false;
+        let emailError: string | null = null;
+        if (resendApiKey) {
+          try {
+            const resendRes = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${resendApiKey}`,
+              },
+              body: JSON.stringify({
+                from: "AWS SBG Admin <notifications@awssbg.online>",
+                to: [targetUser.email],
+                reply_to: "enquiries@awssbg.online",
+                subject: `Invitation Reminder: AWS SBG Admin Team${orgName ? ` — ${orgName}` : ""}`,
+                html: buildAdminInviteEmail({
+                  inviteeName: targetUser.name,
+                  inviterEmail: caller.email || "Lead Administrator",
+                  role: targetUser.role,
+                  actionLink,
+                  orgName,
+                }),
+              }),
+            });
+            if (resendRes.ok) emailDispatched = true;
+            else emailError = await resendRes.text();
+          } catch (e) {
+            emailError = (e as Error).message;
+          }
+        }
+
+        await logActivity(supabaseAdmin, {
+          org_id: targetUser.org_id || null,
+          actor_id: caller.id,
+          actor_name: callerProfile?.name || caller.email || "Admin",
+          action: "user.invite_resent",
+          entity_type: "user",
+          entity_id: targetUser.id,
+          summary: `Resent invitation to "${targetUser.name}" (${targetUser.email})`,
+        });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: emailDispatched
+              ? `Invitation email successfully resent to ${targetUser.email}`
+              : `User found and invite link refreshed.`,
+            inviteLink: actionLink,
+            emailDispatched,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
       const { email, name, role, org_id } = body;
 
       if (!email || !email.includes("@")) {
@@ -389,6 +512,129 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
         JSON.stringify({
           error: "Invalid request: " + (err as Error).message,
         }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
+
+  // ── Handle PATCH (Change User Role / SBG Assignment) ──
+  if (request.method === "PATCH") {
+    if (!isSuperAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Access restricted: Superadmin builder privileges required to change roles." }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    try {
+      const body = (await request.json()) as {
+        userId: string;
+        role?: string;
+        org_id?: string | null;
+      };
+      const { userId, role, org_id } = body;
+
+      if (!userId) {
+        return new Response(JSON.stringify({ error: "userId is required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const validRoles = ["member", "admin", "leader", "superadmin"];
+      if (role && !validRoles.includes(role.toLowerCase())) {
+        return new Response(
+          JSON.stringify({ error: `Invalid role. Allowed values: ${validRoles.join(", ")}` }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const targetRole = role ? role.toLowerCase() : undefined;
+
+      // Look up target user
+      const { data: targetUser, error: targetError } = await supabaseAdmin
+        .from("admin_users")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (targetError || !targetUser) {
+        return new Response(JSON.stringify({ error: "Target user not found." }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Protection: cannot demote the last Superadmin
+      if (targetUser.role === "superadmin" || targetUser.is_super_admin) {
+        if (targetRole && targetRole !== "superadmin") {
+          const { count } = await supabaseAdmin
+            .from("admin_users")
+            .select("*", { count: "exact", head: true })
+            .or("is_super_admin.eq.true,role.eq.superadmin");
+
+          if ((count ?? 1) <= 1) {
+            return new Response(
+              JSON.stringify({ error: "Security restriction: Cannot demote the platform's last Super Admin." }),
+              { status: 400, headers: { "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+
+      const updates: Record<string, any> = {};
+      if (targetRole) {
+        updates.role = targetRole;
+        updates.is_super_admin = targetRole === "superadmin";
+      }
+      if (org_id !== undefined) {
+        updates.org_id = targetRole === "superadmin" ? null : org_id;
+      }
+
+      const { data: updatedUser, error: updateErr } = await supabaseAdmin
+        .from("admin_users")
+        .update(updates)
+        .eq("id", userId)
+        .select("*, orgs(id, name, slug)")
+        .single();
+
+      if (updateErr) {
+        return new Response(JSON.stringify({ error: updateErr.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Sync role into auth.users metadata
+      if (targetRole) {
+        await supabaseAdmin.auth.admin.updateUserById(userId, {
+          app_metadata: { role: targetRole, is_super_admin: targetRole === "superadmin" },
+          user_metadata: { role: targetRole },
+        });
+      }
+
+      // Audit log
+      await logActivity(supabaseAdmin, {
+        org_id: updatedUser?.org_id || targetUser.org_id || null,
+        actor_id: caller.id,
+        actor_name: callerProfile?.name || caller.email || "Superadmin",
+        action: "user.role_changed",
+        entity_type: "user",
+        entity_id: userId,
+        summary: `Changed role of "${targetUser.name}" (${targetUser.email}) from ${targetUser.role.toUpperCase()} to ${(targetRole || targetUser.role).toUpperCase()}`,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Role for ${targetUser.name} updated to ${(targetRole || targetUser.role).toUpperCase()}`,
+          user: updatedUser,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (err) {
+      return new Response(
+        JSON.stringify({ error: "Invalid request: " + (err as Error).message }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }

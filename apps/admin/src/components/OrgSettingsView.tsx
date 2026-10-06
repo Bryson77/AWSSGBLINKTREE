@@ -9,6 +9,7 @@ import {
   HiOutlineCheck,
   HiOutlinePhoto,
   HiOutlineLockClosed,
+  HiOutlineTrash,
 } from "react-icons/hi2";
 
 interface OrgSettingsViewProps {
@@ -17,6 +18,8 @@ interface OrgSettingsViewProps {
   actorName: string;
   isSuperAdmin: boolean;
   userRole: string;
+  orgName?: string;
+  onDeleteClick?: () => void;
 }
 
 export function OrgSettingsView({
@@ -25,6 +28,8 @@ export function OrgSettingsView({
   actorName,
   isSuperAdmin,
   userRole,
+  orgName,
+  onDeleteClick,
 }: OrgSettingsViewProps) {
   const [settings, setSettings] = useState<Partial<OrgSettings>>({
     hero_title: "",
@@ -242,6 +247,32 @@ export function OrgSettingsView({
             title="Upload Group Logo / Hero Image"
           />
         </form>
+      )}
+
+      {isSuperAdmin && onDeleteClick && (
+        <div className="border-[3px] border-black bg-red-50 p-5 shadow-[4px_4px_0px_#000000]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="mb-1 inline-block border-2 border-black bg-red-600 px-2 py-0.5 font-mono text-[9px] font-black uppercase text-white shadow-[2px_2px_0px_#000000]">
+                // DANGER_ZONE
+              </div>
+              <h3 className="text-lg font-black uppercase tracking-tight text-red-700">
+                Delete {orgName || "This AWS SBG"}
+              </h3>
+              <p className="font-mono text-xs text-red-900 mt-0.5">
+                Permanently archive this chapter, detach all assigned members, and deactivate its public hub.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onDeleteClick}
+              className="inline-flex items-center justify-center gap-2 border-2 border-black bg-red-600 px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#000000] hover:bg-black active:translate-x-[1px] active:translate-y-[1px] active:shadow-none cursor-pointer shrink-0"
+            >
+              <HiOutlineTrash className="h-4 w-4" />
+              <span>Delete AWS SBG</span>
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

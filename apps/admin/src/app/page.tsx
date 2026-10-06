@@ -72,9 +72,11 @@ interface AdminUser {
   email: string;
   name: string;
   role: string;
+  org_id?: string | null;
   is_super_admin: boolean;
   created_at: string;
   last_sign_in_at: string | null;
+  orgs?: { id: string; name: string; slug: string } | null;
 }
 
 // ── User-Friendly Error Sanitizer ──
@@ -213,6 +215,22 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"password" | "magic" | "recovery">("password");
+  const [setupSuccess, setSetupSuccess] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const emailParam = params.get("email");
+      const setupParam = params.get("setup");
+      if (emailParam) {
+        setEmail(emailParam);
+      }
+      if (setupParam === "success") {
+        setSetupSuccess(true);
+        setMode("password");
+      }
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -279,6 +297,17 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
             Dedicated Cloud Management Console
           </p>
         </div>
+
+        {setupSuccess && (
+          <div className="mb-5 border-2 border-black bg-emerald-50 p-3.5 shadow-[3px_3px_0px_#000000]">
+            <p className="font-mono text-xs font-black uppercase text-black">
+              // CREDENTIALS_CONFIGURED
+            </p>
+            <p className="mt-1 font-mono text-xs font-bold text-emerald-800">
+              Password established successfully! Please enter your new password below to sign in.
+            </p>
+          </div>
+        )}
 
         <div className="mb-5 flex border-2 border-black bg-zinc-100 p-0.5">
           <button
@@ -888,6 +917,201 @@ function AddNewSbgModal({
   );
 }
 
+// ── Superadmin SBG Deletion Confirmation Modal ──
+function DeleteOrgModal({
+  org,
+  token,
+  onClose,
+  onOrgDeleted,
+}: {
+  org: Organization;
+  token: string;
+  onClose: () => void;
+  onOrgDeleted: () => void;
+}) {
+  const [confirmationInput, setConfirmationInput] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const isMatch = confirmationInput.trim().toLowerCase() === org.name.trim().toLowerCase();
+
+  async function handleDelete(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isMatch) {
+      toast.error("Confirmation mismatch", {
+        description: `Please type the exact name "${org.name}" to confirm deletion.`,
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/orgs", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          orgId: org.id,
+          orgNameConfirmation: confirmationInput.trim(),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete AWS SBG");
+      }
+
+      toast.success("AWS SBG deleted successfully!", {
+        description: `"${org.name}" has been removed and archived.`,
+      });
+      onOrgDeleted();
+      onClose();
+    } catch (err) {
+      toast.error("Deletion failed", {
+        description: formatUserError(err, "Unable to delete AWS SBG at this time."),
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-5 backdrop-blur-xs">
+      <div className="relative w-full max-w-lg border-[3px] border-black bg-white p-6 sm:p-8 shadow-[8px_8px_0px_#000000]">
+        <div className="flex items-center justify-between pb-3 mb-4 border-b-2 border-black">
+          <div className="flex items-center gap-2">
+            <span className="border-2 border-black bg-red-600 px-2 py-0.5 font-mono text-[9px] font-black uppercase text-white shadow-[2px_2px_0px_#000000]">
+              // DANGER_ZONE
+            </span>
+            <span className="font-mono text-xs font-black uppercase text-black">
+              SBG_DELETION
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+          >
+            <HiOutlineXMark className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="border-2 border-black bg-red-50 p-4">
+            <h2 className="text-lg font-black uppercase tracking-tight text-red-700">
+              Delete {org.name}?
+            </h2>
+            <p className="mt-1 font-mono text-xs text-red-900 leading-relaxed">
+              This is a destructive administrative action. Deleting this AWS SBG will deactivate the chapter (@{org.slug}), unlink its members, and archive its events and links.
+            </p>
+          </div>
+
+          <form onSubmit={handleDelete} className="space-y-4">
+            <div>
+              <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+                Type <span className="underline decoration-red-600 font-bold">{org.name}</span> to confirm:
+              </label>
+              <input
+                type="text"
+                required
+                value={confirmationInput}
+                onChange={(e) => setConfirmationInput(e.target.value)}
+                placeholder={org.name}
+                className="w-full border-2 border-black bg-white px-3.5 py-2.5 font-mono text-sm text-black placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-red-600"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t-2 border-black">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 border-2 border-black bg-white px-4 py-2.5 font-mono text-xs font-bold uppercase text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !isMatch}
+                className="flex-1 border-2 border-black bg-red-600 px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#000000] transition-all hover:bg-red-700 disabled:opacity-40 cursor-pointer"
+              >
+                {loading ? "Deleting SBG..." : "Confirm Delete SBG →"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Confirmation Modal for Role Elevation to Superadmin ──
+function ConfirmRoleElevateModal({
+  user,
+  newRole,
+  onConfirm,
+  onClose,
+}: {
+  user: AdminUser;
+  newRole: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-5 backdrop-blur-xs">
+      <div className="relative w-full max-w-md border-[3px] border-black bg-white p-6 shadow-[8px_8px_0px_#000000]">
+        <div className="flex items-center justify-between pb-2 mb-3 border-b-2 border-black">
+          <div className="flex items-center gap-2">
+            <span className="border border-black bg-accent-purple px-2 py-0.5 font-mono text-[9px] font-black uppercase text-white shadow-[1px_1px_0px_#000000]">
+              // PRIVILEGE_ELEVATION
+            </span>
+            <span className="font-mono text-xs font-black uppercase text-black">
+              SUPERADMIN_ROLE
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+          >
+            <HiOutlineXMark className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div className="border-2 border-black bg-purple-50 p-3.5">
+            <h3 className="font-mono text-sm font-black uppercase text-black">
+              Elevate {user.name} to Super Admin?
+            </h3>
+            <p className="mt-1 font-mono text-xs text-zinc-700 leading-relaxed">
+              Super Admins have unrestricted global access across all AWS SBGs, including user management, SBG onboarding/deletion, and sitewide announcements.
+            </p>
+          </div>
+
+          <div className="flex gap-2 pt-2 border-t-2 border-black">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 border-2 border-black bg-white px-3 py-2 font-mono text-xs font-bold uppercase text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onConfirm();
+                onClose();
+              }}
+              className="flex-1 border-2 border-black bg-accent-purple px-3 py-2 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#000000] hover:bg-black cursor-pointer"
+            >
+              Confirm Promotion &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Password Reset / Update Modal ──
 function PasswordUpdateModal({ onClose }: { onClose: () => void }) {
   const [newPassword, setNewPassword] = useState("");
@@ -1032,9 +1256,11 @@ function ForceSetPasswordScreen({
         description: formatUserError(error, "Unable to establish password. Please try again."),
       });
       setLoading(false);
-    } else {
-      toast.success("Master password configured!", {
-        description: "Your credentials are now active. Welcome to AWS SBG Admin.",
+      // Sign out so user signs in normally with their new credentials
+      await supabase.auth.signOut();
+
+      toast.success("Master password configured successfully!", {
+        description: "Please sign in with your email and new password.",
       });
 
       // Clear the invite/recovery hash tokens from the browser URL bar
@@ -1332,6 +1558,16 @@ function Dashboard() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [sessionToken, setSessionToken] = useState<string>("");
 
+  // Super Admin SBG Deletion & Team Management state
+  const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
+  const [showDeleteOrgModal, setShowDeleteOrgModal] = useState(false);
+  const [roleChangeTarget, setRoleChangeTarget] = useState<{ user: AdminUser; newRole: string } | null>(null);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("ALL");
+  const [userSbgFilter, setUserSbgFilter] = useState("ALL");
+  const [userStatusFilter, setUserStatusFilter] = useState("ALL");
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
+
   const fetchLinks = useCallback(async (orgId?: string) => {
     let query = supabase.from("links").select("*");
     if (orgId && orgId !== "all") {
@@ -1380,8 +1616,12 @@ function Dashboard() {
       setCurrentUserId(session.user.id);
       setSessionToken(session.access_token);
 
-      // Fetch orgs
-      const { data: orgsData } = await supabase.from("orgs").select("*").order("name", { ascending: true });
+      // Fetch active orgs
+      const { data: orgsData } = await supabase
+        .from("orgs")
+        .select("*")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
       const loadedOrgs = (orgsData as Organization[]) || [];
       setOrgs(loadedOrgs);
 
@@ -1397,10 +1637,12 @@ function Dashboard() {
       setCurrentUserRole(profile?.role || (isSuper ? "superadmin" : "member"));
       setCurrentUserName(profile?.name || email.split("@")[0] || "Admin");
 
-      // Initial active group: user's assigned org or first loaded org from database
+      // Initial active group: locked to profile.org_id for non-superadmin
       let initialOrg = profile?.org_id;
-      if (!initialOrg || isSuper) {
-        initialOrg = loadedOrgs[0]?.id || "";
+      if (isSuper) {
+        initialOrg = initialOrg || loadedOrgs[0]?.id || "";
+      } else {
+        initialOrg = profile?.org_id || loadedOrgs[0]?.id || "";
       }
 
       setSelectedOrgId(initialOrg);
@@ -1659,6 +1901,79 @@ function Dashboard() {
       fetchUsers(sessionToken);
     } catch (err) {
       toast.error("Delete failed", { description: formatUserError(err, "Unable to remove user.") });
+    }
+  }
+
+  async function handleRoleChange(user: AdminUser, newRole: string) {
+    if (newRole === "superadmin") {
+      setRoleChangeTarget({ user, newRole });
+      return;
+    }
+    await executeRoleChange(user.id, newRole, user.name);
+  }
+
+  async function executeRoleChange(userId: string, newRole: string, userName: string) {
+    try {
+      const res = await fetch("/api/users", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update role");
+      }
+      toast.success("Role updated successfully!", {
+        description: `${userName} is now ${newRole.toUpperCase()}.`,
+      });
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId ? { ...u, role: newRole, is_super_admin: newRole === "superadmin" } : u
+        )
+      );
+    } catch (err) {
+      toast.error("Role update failed", {
+        description: formatUserError(err, "Could not update user role."),
+      });
+    }
+  }
+
+  async function handleResendInvite(user: AdminUser) {
+    setResendingInviteId(user.id);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ action: "resend", userId: user.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to resend invite");
+      }
+      toast.success("Invitation dispatched!", {
+        description: data.message || `Sent to ${user.email}`,
+        action: data.inviteLink
+          ? {
+              label: "Copy Link",
+              onClick: () => {
+                navigator.clipboard.writeText(data.inviteLink);
+                toast.success("Invite link copied to clipboard!");
+              },
+            }
+          : undefined,
+      });
+    } catch (err) {
+      toast.error("Failed to resend invite", {
+        description: formatUserError(err, "Unable to refresh invitation at this time."),
+      });
+    } finally {
+      setResendingInviteId(null);
     }
   }
 
@@ -2514,24 +2829,119 @@ function Dashboard() {
                 </div>
               </div>
 
-              {/* Team list */}
-              <div className="space-y-3">
-                {users.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-[3px] border-black bg-white p-3.5 sm:p-4 shadow-[4px_4px_0px_#000000]"
+              {/* Search & Filter Toolbar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-[3px] border-black bg-white p-4 shadow-[4px_4px_0px_#000000]">
+                <div className="flex-1 min-w-[200px]">
+                  <input
+                    type="text"
+                    placeholder="Search members by name or email..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="w-full border-2 border-black bg-white px-3 py-1.5 font-mono text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-purple-600"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isSuperAdmin && (
+                    <select
+                      value={userSbgFilter}
+                      onChange={(e) => setUserSbgFilter(e.target.value)}
+                      className="border-2 border-black bg-white px-2.5 py-1.5 font-mono text-xs font-bold text-black shadow-[1px_1px_0px_#000000] cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-600"
+                    >
+                      <option value="ALL">All SBGs</option>
+                      {orgs.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name}
+                        </option>
+                      ))}
+                      <option value="none">Platform / Unassigned</option>
+                    </select>
+                  )}
+                  <select
+                    value={userRoleFilter}
+                    onChange={(e) => setUserRoleFilter(e.target.value)}
+                    className="border-2 border-black bg-white px-2.5 py-1.5 font-mono text-xs font-bold text-black shadow-[1px_1px_0px_#000000] cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-600"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-black bg-black text-white font-mono font-black text-sm shadow-[2px_2px_0px_#7C3AED]">
-                        {user.name.charAt(0).toUpperCase()}
+                    <option value="ALL">All Roles</option>
+                    <option value="member">Members</option>
+                    <option value="admin">Admins</option>
+                    <option value="leader">Leaders</option>
+                    <option value="superadmin">Super Admins</option>
+                  </select>
+                  <select
+                    value={userStatusFilter}
+                    onChange={(e) => setUserStatusFilter(e.target.value)}
+                    className="border-2 border-black bg-white px-2.5 py-1.5 font-mono text-xs font-bold text-black shadow-[1px_1px_0px_#000000] cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-600"
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="pending">Pending Invite</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Team list: Separated by SBG for Superadmin (Feature D) */}
+              <div className="space-y-6">
+                {(() => {
+                  const query = userSearchQuery.toLowerCase().trim();
+                  const matchesUser = (u: AdminUser) => {
+                    const matchQ = !query || u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query);
+                    const matchR =
+                      userRoleFilter === "ALL" ||
+                      (userRoleFilter === "superadmin" && (u.is_super_admin || u.role === "superadmin")) ||
+                      u.role === userRoleFilter;
+                    const matchS =
+                      userStatusFilter === "ALL" ||
+                      (userStatusFilter === "active" && !!u.last_sign_in_at) ||
+                      (userStatusFilter === "pending" && !u.last_sign_in_at);
+                    return matchQ && matchR && matchS;
+                  };
+
+                  const renderUserRow = (user: AdminUser) => (
+                    <div
+                      key={user.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-2 border-black bg-white p-3.5 shadow-[2px_2px_0px_#000000]"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-black bg-black text-white font-mono font-black text-sm shadow-[2px_2px_0px_#7C3AED]">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-mono text-sm font-black text-black truncate">
+                              {user.name}
+                            </h3>
+                            {user.last_sign_in_at ? (
+                              <span className="border border-black bg-emerald-100 px-1.5 py-0.2 font-mono text-[8px] font-black uppercase text-emerald-800">
+                                Active
+                              </span>
+                            ) : (
+                              <span className="border border-black bg-amber-100 px-1.5 py-0.2 font-mono text-[8px] font-black uppercase text-amber-900">
+                                Pending Invite
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-mono text-[11px] text-zinc-500 truncate">
+                            {user.email}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-mono text-sm font-black text-black truncate">
-                            {user.name}
-                          </h3>
+
+                      <div className="flex flex-wrap items-center justify-end gap-2 pt-2 sm:pt-0 border-t border-black/10 sm:border-0">
+                        {/* Role selector for Superadmin */}
+                        {isSuperAdmin && user.email !== "lethabomabilo33@gmail.com" ? (
+                          <select
+                            value={user.is_super_admin ? "superadmin" : user.role}
+                            onChange={(e) => handleRoleChange(user, e.target.value)}
+                            className="border-2 border-black bg-white px-2 py-1 font-mono text-[11px] font-black uppercase text-black shadow-[1px_1px_0px_#000000] cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-600"
+                          >
+                            <option value="member">Member</option>
+                            <option value="admin">Admin</option>
+                            <option value="leader">Leader</option>
+                            <option value="superadmin">Super Admin</option>
+                          </select>
+                        ) : (
                           <span
-                            className={`border border-black px-1.5 py-0.2 font-mono text-[9px] font-black uppercase ${
+                            className={`border border-black px-2 py-1 font-mono text-[10px] font-black uppercase ${
                               user.is_super_admin
                                 ? "bg-accent-purple text-white shadow-[1px_1px_0px_#000000]"
                                 : "bg-zinc-100 text-black"
@@ -2539,30 +2949,161 @@ function Dashboard() {
                           >
                             {user.is_super_admin ? "SUPERADMIN" : user.role.toUpperCase()}
                           </span>
-                        </div>
-                        <p className="font-mono text-[11px] text-zinc-500 truncate">
-                          {user.email}
-                        </p>
+                        )}
+
+                        {/* Resend invite button */}
+                        {!user.last_sign_in_at && (
+                          <button
+                            onClick={() => handleResendInvite(user)}
+                            disabled={resendingInviteId === user.id}
+                            className="inline-flex items-center gap-1 border-2 border-black bg-zinc-100 px-2 py-1 font-mono text-[11px] font-bold text-black shadow-[1px_1px_0px_#000000] hover:bg-zinc-200 cursor-pointer disabled:opacity-50"
+                            title="Resend invitation link"
+                          >
+                            <HiOutlineClock className="h-3.5 w-3.5" />
+                            <span>{resendingInviteId === user.id ? "Sending..." : "Resend"}</span>
+                          </button>
+                        )}
+
+                        {/* Remove user */}
+                        {!user.is_super_admin && user.email !== "lethabomabilo33@gmail.com" ? (
+                          <button
+                            onClick={() => handleDeleteUser(user.id, user.email)}
+                            className="inline-flex items-center gap-1 border-2 border-black bg-white px-2.5 py-1 font-mono text-[11px] font-bold text-red-600 shadow-[1px_1px_0px_#000000] hover:bg-red-50 cursor-pointer"
+                          >
+                            <HiOutlineTrash className="h-3.5 w-3.5" />
+                            <span>Remove</span>
+                          </button>
+                        ) : (
+                          <span className="font-mono text-[10px] font-bold text-zinc-400">
+                            PRIMARY OWNER
+                          </span>
+                        )}
                       </div>
                     </div>
+                  );
 
-                    <div className="flex items-center justify-end gap-2 pt-2 sm:pt-0 border-t border-black/10 sm:border-0">
-                      {!user.is_super_admin && user.email !== "lethabomabilo33@gmail.com" ? (
-                        <button
-                          onClick={() => handleDeleteUser(user.id, user.email)}
-                          className="inline-flex items-center gap-1 border-2 border-black bg-white px-2.5 py-1 font-mono text-[11px] font-bold text-red-600 shadow-[1px_1px_0px_#000000] hover:bg-red-50 cursor-pointer"
-                        >
-                          <HiOutlineTrash className="h-3.5 w-3.5" />
-                          <span>Remove</span>
-                        </button>
-                      ) : (
-                        <span className="font-mono text-[10px] font-bold text-zinc-400">
-                          PRIMARY OWNER
-                        </span>
+                  // If Superadmin viewing "ALL", render partitioned by SBG
+                  if (isSuperAdmin && userSbgFilter === "ALL") {
+                    const globalAdmins = users.filter((u) => (u.is_super_admin || u.role === "superadmin") && matchesUser(u));
+                    const unassignedUsers = users.filter(
+                      (u) => !u.is_super_admin && u.role !== "superadmin" && !u.org_id && matchesUser(u)
+                    );
+
+                    return (
+                      <div className="space-y-6">
+                        {/* Global Superadmin Group */}
+                        {globalAdmins.length > 0 && (
+                          <div className="border-[3px] border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000000] space-y-3">
+                            <div className="flex items-center justify-between pb-3 border-b-2 border-black">
+                              <div className="flex items-center gap-2">
+                                <span className="border border-black bg-accent-purple px-2 py-0.2 font-mono text-[9px] font-black uppercase text-white shadow-[1px_1px_0px_#000000]">
+                                  // GLOBAL_GOVERNANCE
+                                </span>
+                                <h2 className="text-base font-black uppercase tracking-tight text-black">
+                                  Platform Super Administrators
+                                </h2>
+                              </div>
+                              <span className="border border-black bg-zinc-100 px-2 py-0.2 font-mono text-[9px] font-black uppercase text-black">
+                                {globalAdmins.length} {globalAdmins.length === 1 ? "Admin" : "Admins"}
+                              </span>
+                            </div>
+                            <div className="space-y-2.5">
+                              {globalAdmins.map(renderUserRow)}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Each SBG Chapter Separated */}
+                        {orgs.map((org) => {
+                          const orgMembers = users.filter((u) => u.org_id === org.id && matchesUser(u));
+                          return (
+                            <div
+                              key={org.id}
+                              className="border-[3px] border-black bg-zinc-50 p-4 sm:p-5 shadow-[4px_4px_0px_#000000] space-y-3"
+                            >
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b-2 border-black">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="border border-black bg-black px-2 py-0.2 font-mono text-[9px] font-black uppercase text-white">
+                                      // AWS_SBG // {org.slug.toUpperCase()}
+                                    </span>
+                                    <span className="border border-black bg-purple-100 text-purple-900 px-2 py-0.2 font-mono text-[9px] font-black uppercase">
+                                      {orgMembers.length} {orgMembers.length === 1 ? "Member" : "Members"}
+                                    </span>
+                                  </div>
+                                  <h2 className="text-base font-black uppercase tracking-tight text-black mt-1">
+                                    {org.name}
+                                  </h2>
+                                </div>
+                                {isSuperAdmin && (
+                                  <button
+                                    onClick={() => {
+                                      setOrgToDelete(org);
+                                      setShowDeleteOrgModal(true);
+                                    }}
+                                    className="inline-flex items-center gap-1 border-2 border-black bg-white px-2.5 py-1 font-mono text-[11px] font-bold text-red-600 shadow-[1px_1px_0px_#000000] hover:bg-red-50 cursor-pointer self-start sm:self-auto"
+                                  >
+                                    <HiOutlineTrash className="h-3.5 w-3.5" />
+                                    <span>Delete SBG</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="space-y-2.5">
+                                {orgMembers.map(renderUserRow)}
+                                {orgMembers.length === 0 && (
+                                  <p className="font-mono text-xs text-zinc-500 py-2 italic">
+                                    No members registered in this SBG matching filters.
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Unassigned Group */}
+                        {unassignedUsers.length > 0 && (
+                          <div className="border-[3px] border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000000] space-y-3">
+                            <div className="flex items-center justify-between pb-3 border-b-2 border-black">
+                              <span className="border border-black bg-zinc-200 px-2 py-0.2 font-mono text-[9px] font-black uppercase text-black">
+                                // UNASSIGNED_MEMBERS ({unassignedUsers.length})
+                              </span>
+                            </div>
+                            <div className="space-y-2.5">
+                              {unassignedUsers.map(renderUserRow)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Non-superadmin or specific SBG selected: single scoped list
+                  const scopedUsers = users.filter((u) => {
+                    const matchSbg =
+                      userSbgFilter === "ALL"
+                        ? !isSuperAdmin
+                          ? u.org_id === selectedOrgId
+                          : true
+                        : userSbgFilter === "none"
+                        ? !u.org_id
+                        : u.org_id === userSbgFilter;
+                    return matchSbg && matchesUser(u);
+                  });
+
+                  return (
+                    <div className="space-y-2.5">
+                      {scopedUsers.map(renderUserRow)}
+                      {scopedUsers.length === 0 && (
+                        <div className="border-[3px] border-dashed border-black bg-white py-12 text-center shadow-[4px_4px_0px_#000000]">
+                          <p className="font-mono text-xs font-bold uppercase text-zinc-600">
+                            No team members found matching your search and filter criteria.
+                          </p>
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })()}
               </div>
 
               {/* Group Settings Sub-section embedded within Users & Roles */}
@@ -2584,6 +3125,14 @@ function Dashboard() {
                   actorName={currentUserName || currentUserEmail}
                   isSuperAdmin={isSuperAdmin}
                   userRole={currentUserRole}
+                  orgName={orgs.find((o) => o.id === selectedOrgId)?.name}
+                  onDeleteClick={() => {
+                    const target = orgs.find((o) => o.id === selectedOrgId);
+                    if (target) {
+                      setOrgToDelete(target);
+                      setShowDeleteOrgModal(true);
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -2705,6 +3254,41 @@ function Dashboard() {
           onDelete={handleDeleteInquiry}
         />
       )}
+
+      {showDeleteOrgModal && orgToDelete && (
+        <DeleteOrgModal
+          org={orgToDelete}
+          token={sessionToken}
+          onClose={() => {
+            setShowDeleteOrgModal(false);
+            setOrgToDelete(null);
+          }}
+          onOrgDeleted={() => {
+            const deletedId = orgToDelete.id;
+            setOrgs((prev) => prev.filter((o) => o.id !== deletedId));
+            if (selectedOrgId === deletedId) {
+              const remaining = orgs.filter((o) => o.id !== deletedId);
+              setSelectedOrgId(remaining[0]?.id || "");
+            }
+            fetchUsers(sessionToken);
+          }}
+        />
+      )}
+
+      {roleChangeTarget && (
+        <ConfirmRoleElevateModal
+          user={roleChangeTarget.user}
+          newRole={roleChangeTarget.newRole}
+          onConfirm={() =>
+            executeRoleChange(
+              roleChangeTarget.user.id,
+              roleChangeTarget.newRole,
+              roleChangeTarget.user.name
+            )
+          }
+          onClose={() => setRoleChangeTarget(null)}
+        />
+      )}
     </div>
   );
 }
@@ -2782,7 +3366,10 @@ export default function AdminPage() {
     return (
       <ForceSetPasswordScreen
         email={userEmail}
-        onComplete={() => setMustSetPassword(false)}
+        onComplete={() => {
+          setMustSetPassword(false);
+          setAuthed(false);
+        }}
       />
     );
   }

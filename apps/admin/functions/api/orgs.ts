@@ -54,14 +54,14 @@ function buildLeaderInviteEmail(data: {
             <tr><td style="padding: 4px 0;"><strong>Admin Console:</strong> https://admin.awssbg.online</td></tr>
           </table>
           <p style="margin: 0 0 16px 0; font-size: 13px; color: #52525B;">
-            Click below to activate your account, configure your password, and begin customizing your SBG&rsquo;s links, meetups, team bios, and announcements.
+            Click below to activate your account and set your new password. Once set, you will sign in to begin customizing your SBG&rsquo;s links, meetups, team bios, and announcements.
           </p>
         </td></tr>
         <tr><td align="center" style="padding-bottom: 24px;">
           <table border="0" cellpadding="0" cellspacing="0" width="100%">
             <tr><td align="center">
               <a href="${data.actionLink}" target="_blank" style="display: block; background-color: #000000; color: #FFFFFF; border: 2px solid #000000; box-shadow: 4px 4px 0px #7C3AED; font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; padding: 14px 20px; text-align: center;">
-                ACTIVATE SBG CONSOLE &rarr;
+                SET NEW PASSWORD & SIGN IN &rarr;
               </a>
             </td></tr>
           </table>
@@ -92,7 +92,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
   const corsHeaders = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 
@@ -103,16 +103,11 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
     });
   }
 
-  if (request.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: corsHeaders,
-    });
+  // Rate limiting on write endpoints
+  if (request.method === "POST" || request.method === "DELETE") {
+    const rateLimitError = enforceRateLimit(request, "org_creation", RATE_LIMIT_RULES.AUTH);
+    if (rateLimitError) return rateLimitError;
   }
-
-  // Rate limiting
-  const rateLimitError = enforceRateLimit(request, "org_creation", RATE_LIMIT_RULES.AUTH);
-  if (rateLimitError) return rateLimitError;
 
   const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || "https://yzmgkreucvbftolijtpl.supabase.co";
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -151,7 +146,7 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
     );
   }
 
-  // Check if caller is Superadmin
+  // Check caller role
   const { data: callerProfile } = await supabaseAdmin
     .from("admin_users")
     .select("*")
@@ -163,12 +158,37 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
     callerProfile?.role === "superadmin" ||
     caller.email === "lethabomabilo33@gmail.com";
 
-  if (!isSuperAdmin) {
-    return new Response(
-      JSON.stringify({ error: "Forbidden: Superadmin privileges required to create new SBGs." }),
-      { status: 403, headers: corsHeaders }
-    );
+  // ── Handle GET (List Active SBGs) ──
+  if (request.method === "GET") {
+    let query = supabaseAdmin.from("orgs").select("*");
+    if (!isSuperAdmin && callerProfile?.org_id) {
+      query = query.eq("id", callerProfile.org_id);
+    }
+    const { data: orgsList, error: orgsErr } = await query
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+
+    if (orgsErr) {
+      return new Response(JSON.stringify({ error: orgsErr.message }), {
+        status: 500,
+        headers: corsHeaders,
+      });
+    }
+
+    return new Response(JSON.stringify({ orgs: orgsList || [] }), {
+      status: 200,
+      headers: corsHeaders,
+    });
   }
+
+  // ── Handle POST (Create SBG) ──
+  if (request.method === "POST") {
+    if (!isSuperAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Superadmin privileges required to create new SBGs." }),
+        { status: 403, headers: corsHeaders }
+      );
+    }
 
   try {
     const body = (await request.json()) as {
@@ -367,10 +387,135 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
       }),
       { status: 201, headers: corsHeaders }
     );
-  } catch (err) {
-    return new Response(
-      JSON.stringify({ error: "Failed creating SBG: " + (err as Error).message }),
-      { status: 400, headers: corsHeaders }
-    );
+    } catch (err) {
+      return new Response(
+        JSON.stringify({ error: "Failed creating SBG: " + (err as Error).message }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
   }
+
+  // ── Handle DELETE (Delete / Archive AWS SBG) ──
+  if (request.method === "DELETE") {
+    if (!isSuperAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Superadmin privileges required to delete an AWS SBG." }),
+        { status: 403, headers: corsHeaders }
+      );
+    }
+
+    try {
+      const body = (await request.json()) as {
+        orgId: string;
+        orgNameConfirmation: string;
+        hardDelete?: boolean;
+      };
+      const { orgId, orgNameConfirmation, hardDelete } = body;
+
+      if (!orgId) {
+        return new Response(JSON.stringify({ error: "orgId is required." }), {
+          status: 400,
+          headers: corsHeaders,
+        });
+      }
+
+      // Look up target org
+      const { data: targetOrg, error: orgLookupErr } = await supabaseAdmin
+        .from("orgs")
+        .select("*")
+        .eq("id", orgId)
+        .single();
+
+      if (orgLookupErr || !targetOrg) {
+        return new Response(JSON.stringify({ error: "AWS SBG not found." }), {
+          status: 404,
+          headers: corsHeaders,
+        });
+      }
+
+      // Exact name confirmation check
+      if (
+        !orgNameConfirmation ||
+        orgNameConfirmation.trim().toLowerCase() !== targetOrg.name.trim().toLowerCase()
+      ) {
+        return new Response(
+          JSON.stringify({
+            error: `Confirmation mismatch. You must type the exact name "${targetOrg.name}" to confirm deletion.`,
+          }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
+      // Query affected member and link counts
+      const { count: memberCount } = await supabaseAdmin
+        .from("admin_users")
+        .select("*", { count: "exact", head: true })
+        .eq("org_id", orgId);
+
+      const { count: linkCount } = await supabaseAdmin
+        .from("links")
+        .select("*", { count: "exact", head: true })
+        .eq("org_id", orgId);
+
+      if (hardDelete === true) {
+        // Cascade delete will clean up related entities according to DB schema
+        const { error: deleteErr } = await supabaseAdmin.from("orgs").delete().eq("id", orgId);
+        if (deleteErr) {
+          return new Response(JSON.stringify({ error: deleteErr.message }), {
+            status: 500,
+            headers: corsHeaders,
+          });
+        }
+      } else {
+        // Soft delete / archive
+        const { error: archiveErr } = await supabaseAdmin
+          .from("orgs")
+          .update({ is_active: false, deleted_at: new Date().toISOString() })
+          .eq("id", orgId);
+
+        if (archiveErr) {
+          return new Response(JSON.stringify({ error: archiveErr.message }), {
+            status: 500,
+            headers: corsHeaders,
+          });
+        }
+
+        // Unassign members from archived org
+        await supabaseAdmin.from("admin_users").update({ org_id: null }).eq("org_id", orgId);
+      }
+
+      // Audit log
+      await logActivity(supabaseAdmin, {
+        org_id: null,
+        actor_id: caller.id,
+        actor_name: callerProfile?.name || caller.email || "Superadmin",
+        action: "org.deleted",
+        entity_type: "org",
+        entity_id: orgId,
+        summary: `Deleted AWS SBG "${targetOrg.name}" (@${targetOrg.slug}) [${memberCount || 0} members, ${linkCount || 0} links affected]`,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `AWS SBG "${targetOrg.name}" deleted successfully.`,
+          affected: {
+            members: memberCount || 0,
+            links: linkCount || 0,
+          },
+        }),
+        { status: 200, headers: corsHeaders }
+      );
+    } catch (err) {
+      return new Response(
+        JSON.stringify({ error: "Failed to delete SBG: " + (err as Error).message }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+  }
+
+  return new Response(JSON.stringify({ error: "Method not allowed" }), {
+    status: 405,
+    headers: corsHeaders,
+  });
 };
