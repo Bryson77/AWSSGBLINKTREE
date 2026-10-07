@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { supabase, Post, logActivity } from "@awssbg/shared";
+import { supabase, Post, Organization, logActivity } from "@awssbg/shared";
 import { marked } from "marked";
 import { sanitizeContent } from "@awssbg/shared";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ interface BlogManagerProps {
   actorId: string;
   actorName: string;
   isSuperAdmin: boolean;
+  orgs?: Organization[];
 }
 
 export function BlogManager({
@@ -30,6 +31,7 @@ export function BlogManager({
   actorId,
   actorName,
   isSuperAdmin,
+  orgs = [],
 }: BlogManagerProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -304,6 +306,11 @@ export function BlogManager({
                     >
                       {post.status}
                     </span>
+                    {currentOrgId === "all" && post.org_id && (
+                      <span className="border border-black bg-purple-100 text-purple-900 px-1.5 py-0.2 font-mono text-[9px] font-black uppercase">
+                        @{orgs.find((o) => o.id === post.org_id)?.slug.toUpperCase() || "CAMPUS"}
+                      </span>
+                    )}
                     <span className="font-mono text-[10px] text-zinc-500">
                       /{post.slug}
                     </span>
@@ -356,7 +363,26 @@ export function BlogManager({
             </div>
 
             {/* Meta Inputs Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 border-b-[3px] border-black bg-zinc-50 p-4">
+            <div className={`grid grid-cols-1 ${orgs.length > 0 && isSuperAdmin ? "md:grid-cols-4" : "md:grid-cols-3"} gap-3 border-b-[3px] border-black bg-zinc-50 p-4`}>
+              {orgs.length > 0 && isSuperAdmin && (
+                <div>
+                  <label className="mb-1 block font-mono text-[10px] font-black uppercase text-black">
+                    Target SBG Campus *
+                  </label>
+                  <select
+                    value={editingPost.org_id || (currentOrgId !== "all" ? currentOrgId : orgs[0]?.id)}
+                    onChange={(e) => setEditingPost({ ...editingPost, org_id: e.target.value })}
+                    className="w-full border-2 border-black bg-white px-2.5 py-1.5 font-mono text-xs font-bold text-black focus:outline-none focus:ring-1 focus:ring-purple-600 cursor-pointer"
+                  >
+                    {orgs.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name} (@{o.slug})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="mb-1 block font-mono text-[10px] font-black uppercase text-black">
                   Article Title *

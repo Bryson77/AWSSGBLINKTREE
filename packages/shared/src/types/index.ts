@@ -19,6 +19,16 @@ export interface OrgSettings {
   hero_subtitle: string;
   hero_image_url: string | null;
   contact_recipient_email: string;
+  about_bio?: string | null;
+  updated_at: string;
+}
+
+export interface SiteSettings {
+  id: string;
+  hero_title: string;
+  hero_subtitle: string;
+  contact_recipient_email: string;
+  about_bio?: string | null;
   updated_at: string;
 }
 
@@ -41,6 +51,8 @@ export interface TeamMember {
   name: string;
   role_title: string;
   photo_url: string | null;
+  linkedin_url?: string | null;
+  github_url?: string | null;
   is_leader: boolean;
   sort_order: number;
   created_at: string;

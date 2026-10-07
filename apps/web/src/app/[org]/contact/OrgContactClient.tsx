@@ -187,7 +187,7 @@ export default function OrgContactClient() {
           <div className="mb-6">
             <Link
               href={`/${orgSlug}`}
-              className="inline-flex items-center gap-1.5 border-2 border-black bg-white px-3 py-1 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-black hover:text-white transition-all"
+              className="inline-flex items-center gap-1.5 border-2 border-black bg-white px-3 py-1 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-black hover:text-white transition-all no-underline"
             >
               <HiArrowLeft className="h-3.5 w-3.5" />
               <span>Return to AWS SBG Hub</span>

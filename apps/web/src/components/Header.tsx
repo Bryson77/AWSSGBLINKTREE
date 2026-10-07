@@ -23,23 +23,48 @@ import {
 
 
 
+const KNOWN_STATIC_ROUTES = new Set([
+  "",
+  "about",
+  "contact",
+  "blog",
+  "events",
+  "ticket",
+  "privacy",
+  "terms",
+  "admin",
+]);
+
 export default function Header() {
-  const pathname = usePathname();
+  const pathname = usePathname() || "/";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Single-SBG mode: all primary navigation points to unified root routes
-  const navLinks = [
-    { href: "/", label: "Home", icon: HiOutlineHome },
-    { href: "/about", label: "About", icon: HiOutlineInformationCircle },
-    { href: "/blog", label: "Blog", icon: HiOutlineDocumentText },
-    { href: "/contact", label: "Contact", icon: HiOutlineEnvelope },
-  ];
+  // Determine if currently browsing an individual campus route (e.g. /tut, /tut/about)
+  const segments = pathname.replace(/^\/|\/$/g, "").split("/");
+  const firstSegment = segments[0] || "";
+  const isCampusRoute = Boolean(firstSegment && !KNOWN_STATIC_ROUTES.has(firstSegment.toLowerCase()));
+  const campusSlug = isCampusRoute ? firstSegment : null;
+
+  // Context-aware navigation links
+  const navLinks = campusSlug
+    ? [
+        { href: `/${campusSlug}`, label: "Home", icon: HiOutlineHome },
+        { href: `/${campusSlug}/about`, label: "About", icon: HiOutlineInformationCircle },
+        { href: `/${campusSlug}/blog`, label: "Blog", icon: HiOutlineDocumentText },
+        { href: `/${campusSlug}/contact`, label: "Contact", icon: HiOutlineEnvelope },
+      ]
+    : [
+        { href: "/", label: "Directory", icon: HiOutlineHome },
+        { href: "/about", label: "About", icon: HiOutlineInformationCircle },
+        { href: "/blog", label: "Blog", icon: HiOutlineDocumentText },
+        { href: "/contact", label: "Contact", icon: HiOutlineEnvelope },
+      ];
 
   const checkIsActive = (linkHref: string) => {
-    if (linkHref === "/") {
-      return pathname === "/" || pathname === "/tut";
+    if (linkHref === "/" || (campusSlug && linkHref === `/${campusSlug}`)) {
+      return pathname.toLowerCase() === linkHref.toLowerCase();
     }
-    return pathname.startsWith(linkHref);
+    return pathname.toLowerCase().startsWith(linkHref.toLowerCase());
   };
 
   const handleShare = async () => {
@@ -73,8 +98,8 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b-[3px] border-black bg-white pt-[env(safe-area-inset-top)]">
-      <div className="mx-auto flex h-[58px] sm:h-[62px] max-w-[720px] items-center justify-between px-4 sm:px-6">
-        {/* Brand logo + Wordmark */}
+      <div className="mx-auto flex h-[58px] sm:h-[62px] max-w-[760px] items-center justify-between px-4 sm:px-6">
+        {/* Brand logo + Wordmark (Always returns to root directory /) */}
         <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group no-underline">
           <div className="relative flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center border-2 border-black bg-white p-1 shadow-[2px_2px_0px_#000000] transition-transform group-hover:scale-105">
             <Image
@@ -86,9 +111,19 @@ export default function Header() {
               priority
             />
           </div>
-          <span className="font-mono text-[12px] sm:text-[13px] font-black uppercase tracking-wider text-black">
-            AWS SBG <span className="text-accent-purple">//</span> BUILDERS
-          </span>
+          <div className="flex flex-col">
+            <span className="font-mono text-[12px] sm:text-[13px] font-black uppercase tracking-wider text-black">
+              AWS SBG {campusSlug ? (
+                <>
+                  <span className="text-accent-purple">//</span> @{campusSlug.toUpperCase()}
+                </>
+              ) : (
+                <>
+                  <span className="text-accent-purple">//</span> BUILDERS
+                </>
+              )}
+            </span>
+          </div>
         </Link>
 
         {/* Desktop Navigation Links */}
@@ -99,7 +134,7 @@ export default function Header() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-3 py-1.5 border-2 transition-all ${
+                className={`px-3 py-1.5 border-2 transition-all no-underline ${
                   isActive
                     ? "border-black bg-black text-white shadow-[2px_2px_0px_#7C3AED]"
                     : "border-transparent text-black hover:border-black hover:bg-zinc-100"
@@ -109,10 +144,31 @@ export default function Header() {
               </Link>
             );
           })}
+
+          {/* Directory Escape Pill when on campus route */}
+          {campusSlug && (
+            <Link
+              href="/"
+              className="ml-1 inline-flex items-center gap-1 border-2 border-black bg-zinc-100 hover:bg-black hover:text-white px-2.5 py-1 font-mono text-[10px] font-black uppercase text-black shadow-[2px_2px_0px_#000000] transition-colors no-underline"
+              title="Return to Public SBG Directory"
+            >
+              <span>ALL SBGS</span>
+            </Link>
+          )}
         </nav>
 
         {/* Actions (Share + Mobile Menu Button) */}
         <div className="flex items-center gap-2">
+          {campusSlug && (
+            <Link
+              href="/"
+              className="md:hidden inline-flex items-center gap-1 border-2 border-black bg-zinc-100 px-2 py-1 font-mono text-[10px] font-black uppercase text-black shadow-[1px_1px_0px_#000000] no-underline"
+              title="Return to Public SBG Directory"
+            >
+              <span>ALL SBGS</span>
+            </Link>
+          )}
+
           {/* Share Button */}
           <button
             onClick={handleShare}
@@ -150,7 +206,7 @@ export default function Header() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 border-2 font-mono text-[13px] font-black uppercase transition-all ${
+                  className={`flex items-center gap-2.5 px-3 py-2.5 border-2 font-mono text-[13px] font-black uppercase transition-all no-underline ${
                     isActive
                       ? "border-black bg-black text-white shadow-[3px_3px_0px_#7C3AED]"
                       : "border-black bg-white text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-100"
@@ -161,6 +217,16 @@ export default function Header() {
                 </Link>
               );
             })}
+
+            {campusSlug && (
+              <Link
+                href="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2.5 border-2 border-black bg-zinc-100 font-mono text-[13px] font-black uppercase text-black shadow-[2px_2px_0px_#000000] hover:bg-zinc-200 no-underline"
+              >
+                <span>&larr; Public SBG Directory (All SBGs)</span>
+              </Link>
+            )}
           </div>
         </div>
       )}

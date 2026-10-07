@@ -420,10 +420,16 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
 // ── Link Editor Modal ──
 function LinkEditor({
   link,
+  orgs = [],
+  currentOrgId,
+  isSuperAdmin,
   onSave,
   onCancel,
 }: {
   link: Partial<LinkItem> | null;
+  orgs?: Organization[];
+  currentOrgId?: string;
+  isSuperAdmin?: boolean;
   onSave: (data: Partial<LinkItem>) => void;
   onCancel: () => void;
 }) {
@@ -432,12 +438,20 @@ function LinkEditor({
   const [platform, setPlatform] = useState(link?.platform ?? "website");
   const [description, setDescription] = useState(link?.description ?? "");
   const [isActive, setIsActive] = useState(link?.is_active ?? true);
+  const [selectedOrg, setSelectedOrg] = useState<string>(() => {
+    if (link?.org_id) return link.org_id;
+    if (currentOrgId && currentOrgId !== "all") return currentOrgId;
+    return "global";
+  });
   const isEditing = !!link?.id;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onSave({
       ...(link?.id ? { id: link.id } : {}),
+      org_id: isSuperAdmin
+        ? (selectedOrg === "global" ? null : selectedOrg)
+        : (currentOrgId && currentOrgId !== "all" ? currentOrgId : null),
       title,
       url,
       platform,
@@ -460,6 +474,26 @@ function LinkEditor({
             Publish or update a live destination card.
           </p>
         </div>
+
+        {isSuperAdmin && orgs.length > 0 && (
+          <div>
+            <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
+              Target Scope / Campus
+            </label>
+            <select
+              value={selectedOrg}
+              onChange={(e) => setSelectedOrg(e.target.value)}
+              className="w-full border-2 border-black bg-white px-3.5 py-2 font-mono text-xs font-bold text-black outline-none focus:shadow-[2px_2px_0px_#7C3AED] cursor-pointer"
+            >
+              <option value="global">⚡ Global / Platform Root Site</option>
+              {orgs.map((o) => (
+                <option key={o.id} value={o.id}>
+                  @{o.slug.toUpperCase()} ({o.name})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="mb-1 block font-mono text-xs font-black uppercase tracking-wider text-black">
@@ -1356,11 +1390,13 @@ function ForceSetPasswordScreen({
 // ── Inquiry Detail Modal ──
 function InquiryModal({
   inquiry,
+  orgs = [],
   onClose,
   onStatusChange,
   onDelete,
 }: {
   inquiry: InquiryItem;
+  orgs?: Organization[];
   onClose: () => void;
   onStatusChange: (id: string, status: InquiryItem["status"]) => void;
   onDelete: (id: string) => void;
@@ -1386,6 +1422,12 @@ function InquiryModal({
         </div>
 
         <div className="space-y-2 font-mono text-xs">
+          <div className="flex justify-between border-b border-black/10 pb-1.5">
+            <span className="font-bold text-zinc-500">Target SBG / Scope:</span>
+            <span className="font-black text-black">
+              {inquiry.org_id ? (orgs.find((o) => o.id === inquiry.org_id)?.name || inquiry.org_id) : "⚡ Global / Platform Scope"}
+            </span>
+          </div>
           <div className="flex justify-between border-b border-black/10 pb-1.5">
             <span className="font-bold text-zinc-500">From:</span>
             <span className="font-black text-black">{inquiry.name}</span>
@@ -1549,9 +1591,11 @@ function Dashboard() {
   const [showLivePreview, setShowLivePreview] = useState(false);
   const [selectedInquiry, setSelectedInquiry] = useState<InquiryItem | null>(null);
 
-  // Inquiries filter
+  // Inquiries & Links filters
   const [inquiryCategoryFilter, setInquiryCategoryFilter] = useState("all");
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState("all");
+  const [inquiryOrgFilter, setInquiryOrgFilter] = useState("all");
+  const [linkOrgFilter, setLinkOrgFilter] = useState("all");
 
   // User auth state
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
@@ -1637,10 +1681,10 @@ function Dashboard() {
       setCurrentUserRole(profile?.role || (isSuper ? "superadmin" : "member"));
       setCurrentUserName(profile?.name || email.split("@")[0] || "Admin");
 
-      // Initial active group: locked to profile.org_id for non-superadmin
+      // Initial active group: "all" for superadmin, locked to profile.org_id for non-superadmin
       let initialOrg = profile?.org_id;
       if (isSuper) {
-        initialOrg = initialOrg || loadedOrgs[0]?.id || "";
+        initialOrg = "all";
       } else {
         initialOrg = profile?.org_id || loadedOrgs[0]?.id || "";
       }
@@ -1697,16 +1741,29 @@ function Dashboard() {
     return inquiries.filter((i) => i.status === "unread").length;
   }, [inquiries]);
 
+  // Filtered links
+  const filteredLinks = useMemo(() => {
+    if (selectedOrgId !== "all") return links;
+    if (linkOrgFilter === "all") return links;
+    if (linkOrgFilter === "global") return links.filter((l) => !l.org_id);
+    return links.filter((l) => l.org_id === linkOrgFilter);
+  }, [links, selectedOrgId, linkOrgFilter]);
+
   // Filtered inquiries
   const filteredInquiries = useMemo(() => {
     return inquiries.filter((inq) => {
       const matchesCategory =
-        inquiryCategoryFilter === "ALL" || inq.category === inquiryCategoryFilter;
+        inquiryCategoryFilter === "ALL" || inquiryCategoryFilter === "all" || inq.category === inquiryCategoryFilter;
       const matchesStatus =
-        inquiryStatusFilter === "ALL" || inq.status === inquiryStatusFilter;
-      return matchesCategory && matchesStatus;
+        inquiryStatusFilter === "ALL" || inquiryStatusFilter === "all" || inq.status === inquiryStatusFilter;
+      const matchesOrg =
+        selectedOrgId !== "all" ||
+        inquiryOrgFilter === "all" ||
+        (inquiryOrgFilter === "global" && !inq.org_id) ||
+        inq.org_id === inquiryOrgFilter;
+      return matchesCategory && matchesStatus && matchesOrg;
     });
-  }, [inquiries, inquiryCategoryFilter, inquiryStatusFilter]);
+  }, [inquiries, inquiryCategoryFilter, inquiryStatusFilter, inquiryOrgFilter, selectedOrgId]);
 
   const handleExportInquiriesCSV = async () => {
     if (inquiries.length === 0) {
@@ -1752,10 +1809,16 @@ function Dashboard() {
   };
 
   async function handleSaveLink(data: Partial<LinkItem>) {
-    const targetOrgId = selectedOrgId || undefined;
+    const targetOrgId =
+      data.org_id !== undefined
+        ? data.org_id
+        : selectedOrgId && selectedOrgId !== "all"
+        ? selectedOrgId
+        : null;
+
     if (data.id) {
       const { id, ...rest } = data;
-      const { error } = await supabase.from("links").update(rest).eq("id", id);
+      const { error } = await supabase.from("links").update({ ...rest, org_id: targetOrgId }).eq("id", id);
       if (error) {
         toast.error("Failed to update link", { description: formatUserError(error, "Please check your inputs and try again.") });
       } else {
@@ -1808,7 +1871,7 @@ function Dashboard() {
     } else {
       toast.success("Link deleted");
       await logActivity(supabase, {
-        org_id: selectedOrgId || null,
+        org_id: selectedOrgId && selectedOrgId !== "all" ? selectedOrgId : null,
         actor_id: currentUserId,
         actor_name: currentUserName || currentUserEmail,
         action: "link.deleted",
@@ -1832,7 +1895,7 @@ function Dashboard() {
       toast(nextState ? "Link activated" : "Link hidden", {
         description: `"${link.title}" is now ${nextState ? "visible" : "hidden"} on the public page.`,
       });
-      fetchLinks();
+      fetchLinks(selectedOrgId);
     }
   }
 
@@ -1843,7 +1906,7 @@ function Dashboard() {
     await supabase.from("links").update({ sort_order: above.sort_order }).eq("id", current.id);
     await supabase.from("links").update({ sort_order: current.sort_order }).eq("id", above.id);
     toast.success("Order updated");
-    fetchLinks();
+    fetchLinks(selectedOrgId);
   }
 
   async function handleMoveDown(index: number) {
@@ -1853,7 +1916,7 @@ function Dashboard() {
     await supabase.from("links").update({ sort_order: below.sort_order }).eq("id", current.id);
     await supabase.from("links").update({ sort_order: current.sort_order }).eq("id", below.id);
     toast.success("Order updated");
-    fetchLinks();
+    fetchLinks(selectedOrgId);
   }
 
   async function handleInquiryStatusChange(id: string, status: InquiryItem["status"]) {
@@ -1862,7 +1925,7 @@ function Dashboard() {
       toast.error("Failed to update inquiry status");
     } else {
       toast.success(`Inquiry marked as ${status}`);
-      fetchInquiries();
+      fetchInquiries(selectedOrgId);
       if (selectedInquiry && selectedInquiry.id === id) {
         setSelectedInquiry({ ...selectedInquiry, status });
       }
@@ -1877,7 +1940,7 @@ function Dashboard() {
     } else {
       toast.success("Inquiry deleted");
       setSelectedInquiry(null);
-      fetchInquiries();
+      fetchInquiries(selectedOrgId);
     }
   }
 
@@ -2084,9 +2147,10 @@ function Dashboard() {
                   onChange={(e) => setSelectedOrgId(e.target.value)}
                   className="w-full border-2 border-black bg-white px-2 py-1.5 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-600"
                 >
+                  <option value="all">⚡ [ GLOBAL / ALL SBGS ]</option>
                   {orgs.map((o) => (
                     <option key={o.id} value={o.id}>
-                      {o.name}
+                      {o.name} (@{o.slug})
                     </option>
                   ))}
                 </select>
@@ -2226,9 +2290,10 @@ function Dashboard() {
                     onChange={(e) => setSelectedOrgId(e.target.value)}
                     className="w-full border-2 border-black bg-white px-2 py-1 font-mono text-xs font-bold text-black"
                   >
+                    <option value="all">⚡ [ GLOBAL / ALL SBGS ]</option>
                     {orgs.map((o) => (
                       <option key={o.id} value={o.id}>
-                        {o.name}
+                        {o.name} (@{o.slug})
                       </option>
                     ))}
                   </select>
@@ -2296,13 +2361,15 @@ function Dashboard() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-[3px] border-black bg-white p-5 shadow-[4px_4px_0px_#000000]">
                 <div>
                   <div className="mb-1 inline-block border border-black bg-black px-2 py-0.2 font-mono text-[9px] font-black text-white">
-                    // SYSTEM_OVERVIEW
+                    {selectedOrgId === "all" ? "// SYSTEM_OVERVIEW // GLOBAL_FEDERATION" : `// SYSTEM_OVERVIEW // @${orgs.find((o) => o.id === selectedOrgId)?.slug.toUpperCase() || "CAMPUS"}`}
                   </div>
                   <h1 className="text-2xl font-black uppercase tracking-tight text-black">
                     AWS SBG Dashboard
                   </h1>
                   <p className="font-mono text-xs text-zinc-600 mt-0.5">
-                    Live operational metrics for the student community hub.
+                    {selectedOrgId === "all"
+                      ? "Global operational overview across all AWS SBG campus groups and root platform."
+                      : `Live operational metrics for ${orgs.find((o) => o.id === selectedOrgId)?.name || "selected campus"}.`}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -2406,8 +2473,21 @@ function Dashboard() {
                         className="border-2 border-black bg-zinc-50 p-3 hover:bg-yellow-50 transition-colors cursor-pointer"
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono text-xs font-black text-black">{inq.name}</span>
-                          <span className={`border border-black px-1.5 py-0.2 font-mono text-[8px] font-black uppercase ${
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-mono text-xs font-black text-black truncate">{inq.name}</span>
+                            {selectedOrgId === "all" && (
+                              inq.org_id ? (
+                                <span className="border border-black bg-purple-100 text-purple-900 px-1 py-0.2 font-mono text-[8px] font-black uppercase shrink-0">
+                                  @{orgs.find((o) => o.id === inq.org_id)?.slug.toUpperCase() || "CAMPUS"}
+                                </span>
+                              ) : (
+                                <span className="border border-black bg-black text-white px-1 py-0.2 font-mono text-[8px] font-black uppercase shrink-0">
+                                  @GLOBAL
+                                </span>
+                              )
+                            )}
+                          </div>
+                          <span className={`border border-black px-1.5 py-0.2 font-mono text-[8px] font-black uppercase shrink-0 ${
                             inq.status === "unread" ? "bg-amber-300 text-black" : "bg-zinc-200 text-zinc-700"
                           }`}>
                             {inq.status}
@@ -2458,9 +2538,22 @@ function Dashboard() {
                                 <Icon className="h-3.5 w-3.5 text-black" />
                               </div>
                               <div className="min-w-0">
-                                <span className="block font-mono text-xs font-black text-black truncate">
-                                  {link.title}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="block font-mono text-xs font-black text-black truncate">
+                                    {link.title}
+                                  </span>
+                                  {selectedOrgId === "all" && (
+                                    link.org_id ? (
+                                      <span className="border border-black bg-purple-100 text-purple-900 px-1 py-0.2 font-mono text-[8px] font-black uppercase shrink-0">
+                                        @{orgs.find((o) => o.id === link.org_id)?.slug.toUpperCase() || "CAMPUS"}
+                                      </span>
+                                    ) : (
+                                      <span className="border border-black bg-black text-white px-1 py-0.2 font-mono text-[8px] font-black uppercase shrink-0">
+                                        @GLOBAL
+                                      </span>
+                                    )
+                                  )}
+                                </div>
                                 <span className="block font-mono text-[10px] text-zinc-500 truncate">
                                   {link.url}
                                 </span>
@@ -2561,7 +2654,22 @@ function Dashboard() {
                     {links.filter((l) => l.is_active).length} of {links.length} links published on live site
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedOrgId === "all" && (
+                    <select
+                      value={linkOrgFilter}
+                      onChange={(e) => setLinkOrgFilter(e.target.value)}
+                      className="border-2 border-black bg-white px-2.5 py-2 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] cursor-pointer"
+                    >
+                      <option value="all">ALL CAMPUSES &amp; GLOBAL ({links.length})</option>
+                      <option value="global">⚡ GLOBAL ONLY ({links.filter((l) => !l.org_id).length})</option>
+                      {orgs.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          @{o.slug.toUpperCase()} ({links.filter((l) => l.org_id === o.id).length})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <button
                     onClick={() => {
                       setEditing(null);
@@ -2583,7 +2691,7 @@ function Dashboard() {
               </div>
 
               <div className="space-y-3">
-                {links.map((link, index) => {
+                {filteredLinks.map((link, index) => {
                   const Icon = getIconForPlatform(link.platform);
                   return (
                     <div
@@ -2601,6 +2709,17 @@ function Dashboard() {
                             <h3 className="font-mono text-sm font-black text-black truncate">
                               {link.title}
                             </h3>
+                            {selectedOrgId === "all" && (
+                              link.org_id ? (
+                                <span className="border border-black bg-purple-100 text-purple-900 px-1.5 py-0.2 font-mono text-[9px] font-black uppercase">
+                                  @{orgs.find((o) => o.id === link.org_id)?.slug.toUpperCase() || "CAMPUS"}
+                                </span>
+                              ) : (
+                                <span className="border border-black bg-black text-white px-1.5 py-0.2 font-mono text-[9px] font-black uppercase shadow-[1px_1px_0px_#7C3AED]">
+                                  @GLOBAL
+                                </span>
+                              )
+                            )}
                             {!link.is_active && (
                               <span className="border border-black bg-zinc-200 px-1 py-0.2 font-mono text-[9px] font-black uppercase text-zinc-700">
                                 DRAFT
@@ -2712,6 +2831,22 @@ function Dashboard() {
 
                 {/* Filters */}
                 <div className="mt-4 pt-3 border-t-2 border-black/10 flex flex-wrap gap-2">
+                  {selectedOrgId === "all" && (
+                    <select
+                      value={inquiryOrgFilter}
+                      onChange={(e) => setInquiryOrgFilter(e.target.value)}
+                      className="border-2 border-black bg-white px-2.5 py-1 font-mono text-xs font-bold text-black cursor-pointer shadow-[1px_1px_0px_#000000]"
+                    >
+                      <option value="all">ALL CAMPUSES &amp; GLOBAL ({inquiries.length})</option>
+                      <option value="global">⚡ GLOBAL INQUIRIES ONLY ({inquiries.filter((i) => !i.org_id).length})</option>
+                      {orgs.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          @{o.slug.toUpperCase()} ({inquiries.filter((i) => i.org_id === o.id).length})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
                   <select
                     value={inquiryStatusFilter}
                     onChange={(e) => setInquiryStatusFilter(e.target.value)}
@@ -2762,6 +2897,17 @@ function Dashboard() {
                         }`}>
                           {inq.status}
                         </span>
+                        {selectedOrgId === "all" && (
+                          inq.org_id ? (
+                            <span className="border border-black bg-purple-100 text-purple-900 px-1.5 py-0.2 font-mono text-[8px] font-black uppercase">
+                              @{orgs.find((o) => o.id === inq.org_id)?.slug.toUpperCase() || "CAMPUS"}
+                            </span>
+                          ) : (
+                            <span className="border border-black bg-black text-white px-1.5 py-0.2 font-mono text-[8px] font-black uppercase shadow-[1px_1px_0px_#7C3AED]">
+                              @GLOBAL
+                            </span>
+                          )
+                        )}
                       </div>
                       <span className="block font-mono text-xs font-bold text-accent-purple mb-0.5">
                         {inq.category}
@@ -2982,8 +3128,8 @@ function Dashboard() {
                     </div>
                   );
 
-                  // If Superadmin viewing "ALL", render partitioned by SBG
-                  if (isSuperAdmin && userSbgFilter === "ALL") {
+                  // If Superadmin viewing "ALL" at top and in filter, render partitioned by SBG
+                  if (isSuperAdmin && userSbgFilter === "ALL" && selectedOrgId === "all") {
                     const globalAdmins = users.filter((u) => (u.is_super_admin || u.role === "superadmin") && matchesUser(u));
                     const unassignedUsers = users.filter(
                       (u) => !u.is_super_admin && u.role !== "superadmin" && !u.org_id && matchesUser(u)
@@ -3079,15 +3225,16 @@ function Dashboard() {
                   }
 
                   // Non-superadmin or specific SBG selected: single scoped list
+                  const effectiveSbg =
+                    selectedOrgId !== "all" ? selectedOrgId : userSbgFilter;
+
                   const scopedUsers = users.filter((u) => {
                     const matchSbg =
-                      userSbgFilter === "ALL"
-                        ? !isSuperAdmin
-                          ? u.org_id === selectedOrgId
-                          : true
-                        : userSbgFilter === "none"
+                      effectiveSbg === "ALL"
+                        ? true
+                        : effectiveSbg === "none"
                         ? !u.org_id
-                        : u.org_id === userSbgFilter;
+                        : u.org_id === effectiveSbg;
                     return matchSbg && matchesUser(u);
                   });
 
@@ -3125,7 +3272,7 @@ function Dashboard() {
                   actorName={currentUserName || currentUserEmail}
                   isSuperAdmin={isSuperAdmin}
                   userRole={currentUserRole}
-                  orgName={orgs.find((o) => o.id === selectedOrgId)?.name}
+                  orgName={selectedOrgId === "all" ? "AWS Student Builder Group (Global Platform)" : orgs.find((o) => o.id === selectedOrgId)?.name}
                   onDeleteClick={() => {
                     const target = orgs.find((o) => o.id === selectedOrgId);
                     if (target) {
@@ -3172,6 +3319,7 @@ function Dashboard() {
               actorId={currentUserId}
               actorName={currentUserName || currentUserEmail}
               isSuperAdmin={isSuperAdmin}
+              orgs={orgs}
             />
           )}
 
@@ -3184,6 +3332,7 @@ function Dashboard() {
               actorId={currentUserId}
               actorName={currentUserName || currentUserEmail}
               isSuperAdmin={isSuperAdmin}
+              orgs={orgs}
             />
           )}
 
@@ -3204,6 +3353,9 @@ function Dashboard() {
       {showEditor && (
         <LinkEditor
           link={editing}
+          orgs={orgs}
+          currentOrgId={selectedOrgId}
+          isSuperAdmin={isSuperAdmin}
           onSave={handleSaveLink}
           onCancel={() => {
             setShowEditor(false);
@@ -3249,6 +3401,7 @@ function Dashboard() {
       {selectedInquiry && (
         <InquiryModal
           inquiry={selectedInquiry}
+          orgs={orgs}
           onClose={() => setSelectedInquiry(null)}
           onStatusChange={handleInquiryStatusChange}
           onDelete={handleDeleteInquiry}

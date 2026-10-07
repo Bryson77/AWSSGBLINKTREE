@@ -71,21 +71,36 @@ export default function OrgAboutClient() {
   const orgSlug = (params?.org as string) || "";
   const [shouldRender, setShouldRender] = useState(false);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [aboutBio, setAboutBio] = useState<string | null>(null);
+  const [orgName, setOrgName] = useState<string>("");
 
   useEffect(() => {
-    async function loadAnnouncement() {
+    async function loadAboutData() {
       try {
         setShouldRender(true);
 
         const { data: orgData } = await supabase
           .from("orgs")
-          .select("id")
+          .select("id, name")
           .ilike("slug", orgSlug)
           .eq("is_active", true)
           .is("deleted_at", null)
           .maybeSingle();
 
         if (orgData?.id) {
+          setOrgName(orgData.name);
+
+          // Query campus settings for custom about_bio
+          const { data: settingsData } = await supabase
+            .from("org_settings")
+            .select("about_bio")
+            .eq("org_id", orgData.id)
+            .maybeSingle();
+
+          if (settingsData?.about_bio) {
+            setAboutBio(settingsData.about_bio);
+          }
+
           const nowIso = new Date().toISOString();
           const { data: annData } = await supabase
             .from("announcements")
@@ -105,12 +120,12 @@ export default function OrgAboutClient() {
           }
         }
       } catch (err) {
-        console.error("Failed loading announcement in about:", err);
+        console.error("Failed loading about data:", err);
         setShouldRender(true);
       }
     }
-    loadAnnouncement();
-  }, [orgSlug, router]);
+    loadAboutData();
+  }, [orgSlug]);
 
   if (!shouldRender) return null;
 
@@ -124,7 +139,7 @@ export default function OrgAboutClient() {
           <div className="mb-6">
             <Link
               href={`/${orgSlug}`}
-              className="inline-flex items-center gap-1.5 border-2 border-black bg-white px-3 py-1 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-black hover:text-white transition-all"
+              className="inline-flex items-center gap-1.5 border-2 border-black bg-white px-3 py-1 font-mono text-xs font-bold text-black shadow-[2px_2px_0px_#000000] hover:bg-black hover:text-white transition-all no-underline"
             >
               <HiArrowLeft className="h-3.5 w-3.5" />
               <span>Return to AWS SBG Hub</span>
@@ -142,19 +157,33 @@ export default function OrgAboutClient() {
                 About AWS SBG @{orgSlug.toUpperCase()}
               </h1>
               <p className="mt-1 font-mono text-xs font-semibold text-zinc-600">
-                A student-led cloud computing community, supported by AWS, active in 60+ countries.
+                {orgName ? `${orgName} — ` : ""}A student-led cloud computing community supported by AWS.
               </p>
             </div>
 
             <div className="mb-8 border-2 border-black bg-[#FEF08A] p-4 text-black shadow-[3px_3px_0px_#000000]">
               <div className="mb-1 flex items-center gap-1.5 font-mono text-xs font-black uppercase tracking-wider text-black">
                 <HiOutlineShieldCheck className="h-4 w-4 text-black" />
-                <span>AWS Affiliation &amp; Community Charter</span>
+                <span>Official AWS Affiliation &amp; Student Framework</span>
               </div>
               <p className="font-mono text-[12px] font-bold leading-relaxed text-black">
-                AWS STUDENT BUILDER GROUP (AWS SBG) IS A STUDENT-LED COMMUNITY SUPPORTED BY AMAZON WEB SERVICES (AWS) ACROSS 60+ COUNTRIES. WE ARE RUN BY STUDENT BUILDERS TO DELIVER HANDS-ON WORKSHOPS, STUDY JAMS, AND CERTIFICATION PREPARATION.
+                AWS STUDENT BUILDER GROUP (AWS SBG) IS AN OFFICIAL STUDENT-LED COMMUNITY SUPPORTED BY AMAZON WEB SERVICES (AWS) ACROSS 60+ COUNTRIES. WE ARE RUN BY STUDENT BUILDERS TO DELIVER HANDS-ON WORKSHOPS, STUDY JAMS, AND CERTIFICATION PREPARATION.
               </p>
             </div>
+
+            {/* Custom Campus Story/Bio if configured by campus admins */}
+            {aboutBio && (
+              <div className="mb-8">
+                <h2 className="mb-3 font-mono text-sm font-black uppercase tracking-wider text-black border-l-4 border-black pl-2">
+                  About Our AWS SBG
+                </h2>
+                <div className="border-2 border-black bg-zinc-50 p-4 shadow-[2px_2px_0px_#000000]">
+                  <p className="text-[14px] leading-relaxed text-zinc-900 whitespace-pre-wrap font-sans">
+                    {aboutBio}
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="mb-8">
               <h2 className="mb-3 font-mono text-sm font-black uppercase tracking-wider text-black border-l-4 border-accent-purple pl-2">

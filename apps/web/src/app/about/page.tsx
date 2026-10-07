@@ -107,7 +107,7 @@ export default function AboutPage() {
             <div className="mb-8 border-2 border-black bg-[#FEF08A] p-4 text-black shadow-[3px_3px_0px_#000000]">
               <div className="mb-1 flex items-center gap-1.5 font-mono text-xs font-black uppercase tracking-wider text-black">
                 <HiOutlineShieldCheck className="h-4 w-4 text-black" />
-                <span>AWS Affiliation &amp; Community Charter</span>
+                <span>Official AWS Affiliation &amp; Student Framework</span>
               </div>
               <p className="font-mono text-[12px] font-bold leading-relaxed text-black">
                 AWS STUDENT BUILDER GROUP (AWS SBG) IS A STUDENT-LED COMMUNITY SUPPORTED BY AMAZON WEB SERVICES (AWS) ACROSS 60+ COUNTRIES. WE ARE RUN BY STUDENT BUILDERS TO DELIVER HANDS-ON WORKSHOPS, STUDY JAMS, AND CERTIFICATION PREPARATION.

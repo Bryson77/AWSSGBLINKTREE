@@ -312,12 +312,17 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
     const emailResults: { admin?: any; student?: any; errors?: string[] } = {};
     const errors: string[] = [];
 
+    const superAdminEmail = env.ADMIN_NOTIFICATION_EMAIL || "lethabomabilo33@gmail.com";
+    const adminRecipients = Array.from(
+      new Set([adminRecipientEmail, superAdminEmail, enquiriesEmail].filter(Boolean))
+    );
+
     if (resendKey) {
       // Dispatch A: Formatted Admin Alert
       try {
         emailResults.admin = await sendViaResend(resendKey, {
           from: "AWS SBG Inquiries <enquiries@awssbg.online>",
-          to: [adminRecipientEmail, enquiriesEmail],
+          to: adminRecipients,
           reply_to: cleanEmail,
           subject: `[AWS SBG Inquiry] ${cleanCategory} from ${cleanName}`,
           html: buildInquiryAdminEmail({

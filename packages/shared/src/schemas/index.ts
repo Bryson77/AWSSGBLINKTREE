@@ -28,6 +28,8 @@ export const teamMemberSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(80, "Name cannot exceed 80 characters").trim(),
   role_title: z.string().min(2, "Role title must be at least 2 characters").max(80, "Role title cannot exceed 80 characters").trim(),
   photo_url: z.string().url("Invalid photo URL").nullable().optional(),
+  linkedin_url: z.string().url("Invalid LinkedIn URL").or(z.literal("")).nullable().optional().transform((v) => (!v ? null : v.trim())),
+  github_url: z.string().url("Invalid GitHub URL").or(z.literal("")).nullable().optional().transform((v) => (!v ? null : v.trim())),
   is_leader: z.boolean().default(false),
   sort_order: z.number().int().min(0).default(0),
 });
@@ -38,6 +40,7 @@ export const orgSettingsSchema = z.object({
   hero_subtitle: z.string().min(3, "Hero subtitle must be at least 3 characters").max(200, "Hero subtitle cannot exceed 200 characters").trim(),
   hero_image_url: z.string().url("Invalid hero image URL").nullable().optional(),
   contact_recipient_email: z.string().email("Valid recipient email address is required").trim(),
+  about_bio: z.string().max(2000, "Bio cannot exceed 2000 characters").nullable().optional().transform((v) => (!v ? null : v.trim())),
 });
 
 export const inquirySchema = z.object({

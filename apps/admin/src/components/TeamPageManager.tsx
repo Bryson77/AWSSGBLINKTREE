@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { supabase, TeamMember, logActivity } from "@awssbg/shared";
+import { supabase, TeamMember, Organization, logActivity } from "@awssbg/shared";
 import { toast } from "sonner";
 import { ImageUploadModal } from "./ImageUploadModal";
+import { FaLinkedinIn, FaGithub } from "react-icons/fa6";
 import {
   HiPlus,
   HiOutlinePencilSquare,
@@ -21,6 +22,7 @@ interface TeamPageManagerProps {
   actorId: string;
   actorName: string;
   isSuperAdmin: boolean;
+  orgs?: Organization[];
 }
 
 export function TeamPageManager({
@@ -28,6 +30,7 @@ export function TeamPageManager({
   actorId,
   actorName,
   isSuperAdmin,
+  orgs = [],
 }: TeamPageManagerProps) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,11 +40,13 @@ export function TeamPageManager({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
 
+  const isGlobalView = !currentOrgId || currentOrgId === "all" || currentOrgId === "global";
+
   const fetchMembers = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase.from("team_members").select("*");
-      if (currentOrgId && currentOrgId !== "all") {
+      if (currentOrgId && currentOrgId !== "all" && currentOrgId !== "global") {
         query = query.eq("org_id", currentOrgId);
       }
       const { data, error } = await query.order("sort_order", { ascending: true });
@@ -61,10 +66,12 @@ export function TeamPageManager({
 
   const handleCreateNew = () => {
     setEditingMember({
-      org_id: currentOrgId === "all" ? undefined : currentOrgId,
+      org_id: (!isGlobalView ? currentOrgId : orgs[0]?.id) || undefined,
       name: "",
       role_title: "",
       photo_url: null,
+      linkedin_url: "",
+      github_url: "",
       is_leader: false,
       sort_order: members.length + 1,
     });
@@ -103,6 +110,8 @@ export function TeamPageManager({
             name: editingMember.name.trim(),
             role_title: editingMember.role_title.trim(),
             photo_url: editingMember.photo_url || null,
+            linkedin_url: editingMember.linkedin_url?.trim() || null,
+            github_url: editingMember.github_url?.trim() || null,
             is_leader: !!editingMember.is_leader,
           })
           .eq("id", editingMember.id);
@@ -130,6 +139,8 @@ export function TeamPageManager({
             name: editingMember.name.trim(),
             role_title: editingMember.role_title.trim(),
             photo_url: editingMember.photo_url || null,
+            linkedin_url: editingMember.linkedin_url?.trim() || null,
+            github_url: editingMember.github_url?.trim() || null,
             is_leader: !!editingMember.is_leader,
             sort_order: maxSort + 1,
           })
@@ -269,6 +280,11 @@ export function TeamPageManager({
 
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
+                    {isGlobalView && (
+                      <span className="border border-black bg-zinc-100 px-1.5 py-0.2 font-mono text-[9px] font-black uppercase text-purple-700">
+                        @{orgs.find((o) => o.id === m.org_id)?.slug.toUpperCase() || "CAMPUS"}
+                      </span>
+                    )}
                     {m.is_leader && (
                       <span className="border border-black bg-purple-600 px-1.5 py-0.2 font-mono text-[9px] font-black uppercase text-white">
                         Group Leader
@@ -281,6 +297,32 @@ export function TeamPageManager({
                   <p className="font-mono text-xs font-medium text-zinc-600">
                     {m.role_title}
                   </p>
+                  {(m.linkedin_url || m.github_url) && (
+                    <div className="flex items-center gap-2 mt-1">
+                      {m.linkedin_url && (
+                        <a
+                          href={m.linkedin_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex h-5 w-5 items-center justify-center border border-black bg-zinc-50 text-black hover:bg-[#0A66C2] hover:text-white transition-colors"
+                          title="LinkedIn Profile"
+                        >
+                          <FaLinkedinIn className="h-2.5 w-2.5" />
+                        </a>
+                      )}
+                      {m.github_url && (
+                        <a
+                          href={m.github_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex h-5 w-5 items-center justify-center border border-black bg-zinc-50 text-black hover:bg-black hover:text-white transition-colors"
+                          title="GitHub Profile"
+                        >
+                          <FaGithub className="h-2.5 w-2.5" />
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -343,7 +385,27 @@ export function TeamPageManager({
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+              {/* Campus Selector for Superadmin in Global View */}
+              {isSuperAdmin && orgs.length > 0 && isGlobalView && (
+                <div>
+                  <label className="mb-1 block font-mono text-xs font-black uppercase text-black">
+                    Campus SBG *
+                  </label>
+                  <select
+                    value={editingMember.org_id || orgs[0]?.id || ""}
+                    onChange={(e) => setEditingMember({ ...editingMember, org_id: e.target.value })}
+                    className="w-full border-2 border-black bg-white px-3 py-2 font-mono text-xs font-bold text-black focus:outline-none focus:ring-1 focus:ring-purple-600 cursor-pointer"
+                  >
+                    {orgs.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name} (@{o.slug.toUpperCase()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Photo Preview & Upload */}
               <div className="flex items-center gap-4 border-2 border-black bg-zinc-50 p-3">
                 <div className="h-16 w-16 overflow-hidden border-2 border-black bg-white shrink-0">
@@ -398,6 +460,32 @@ export function TeamPageManager({
                   placeholder="e.g. Cloud Lead &amp; Study Jam Coordinator"
                   value={editingMember.role_title || ""}
                   onChange={(e) => setEditingMember({ ...editingMember, role_title: e.target.value })}
+                  className="w-full border-2 border-black bg-white px-3 py-2 font-mono text-xs text-black focus:outline-none focus:ring-1 focus:ring-purple-600"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block font-mono text-xs font-black uppercase text-black">
+                  LinkedIn Profile URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://linkedin.com/in/username"
+                  value={editingMember.linkedin_url || ""}
+                  onChange={(e) => setEditingMember({ ...editingMember, linkedin_url: e.target.value })}
+                  className="w-full border-2 border-black bg-white px-3 py-2 font-mono text-xs text-black focus:outline-none focus:ring-1 focus:ring-purple-600"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block font-mono text-xs font-black uppercase text-black">
+                  GitHub Profile URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://github.com/username"
+                  value={editingMember.github_url || ""}
+                  onChange={(e) => setEditingMember({ ...editingMember, github_url: e.target.value })}
                   className="w-full border-2 border-black bg-white px-3 py-2 font-mono text-xs text-black focus:outline-none focus:ring-1 focus:ring-purple-600"
                 />
               </div>
