@@ -25,7 +25,7 @@ export default function LinkList({ orgSlug }: LinkListProps) {
           const { data: orgData } = await supabase
             .from("orgs")
             .select("id")
-            .eq("slug", orgSlug)
+            .ilike("slug", orgSlug)
             .maybeSingle();
           orgId = orgData?.id || null;
         } else {

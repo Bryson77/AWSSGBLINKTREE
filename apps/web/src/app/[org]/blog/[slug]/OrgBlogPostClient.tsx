@@ -34,8 +34,10 @@ export default function OrgBlogPostClient() {
         const { data: orgData } = await supabase
           .from("orgs")
           .select("id")
-          .eq("slug", orgSlug)
-          .single();
+          .ilike("slug", orgSlug)
+          .eq("is_active", true)
+          .is("deleted_at", null)
+          .maybeSingle();
 
         if (orgData) {
           // Load announcement

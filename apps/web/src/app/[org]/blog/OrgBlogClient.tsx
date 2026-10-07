@@ -28,18 +28,15 @@ export default function OrgBlogClient() {
   useEffect(() => {
     async function loadData() {
       try {
-        const { data: allOrgs } = await supabase.from("orgs").select("id");
-        if (!allOrgs || allOrgs.length <= 1) {
-          router.replace("/blog");
-          return;
-        }
         setShouldRender(true);
 
         const { data: orgData } = await supabase
           .from("orgs")
           .select("id")
-          .eq("slug", orgSlug)
-          .single();
+          .ilike("slug", orgSlug)
+          .eq("is_active", true)
+          .is("deleted_at", null)
+          .maybeSingle();
 
         if (orgData) {
           // Load announcement
