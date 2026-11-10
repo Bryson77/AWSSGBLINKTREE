@@ -6,7 +6,7 @@
  * Geometry: 0px sharp corners, 3px solid black border, 2px/4px hard shadow.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -19,30 +19,45 @@ import {
   HiOutlineInformationCircle,
   HiOutlineEnvelope,
   HiOutlineDocumentText,
+  HiOutlineCalendar,
 } from "react-icons/hi2";
-
-
 
 const KNOWN_STATIC_ROUTES = new Set([
   "",
   "about",
   "contact",
   "blog",
+  "blogs",
   "events",
   "ticket",
   "privacy",
   "terms",
+  "join",
+  "onboard",
+  "login",
   "admin",
 ]);
 
 export default function Header() {
-  const pathname = usePathname() || "/";
+  const nextPathname = usePathname() || "/";
+  const [browserPathname, setBrowserPathname] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setBrowserPathname(window.location.pathname);
+    }
+  }, [nextPathname]);
+
+  const pathname =
+    nextPathname === "/" && browserPathname ? browserPathname : nextPathname;
 
   // Determine if currently browsing an individual campus route (e.g. /tut, /tut/about)
   const segments = pathname.replace(/^\/|\/$/g, "").split("/");
   const firstSegment = segments[0] || "";
-  const isCampusRoute = Boolean(firstSegment && !KNOWN_STATIC_ROUTES.has(firstSegment.toLowerCase()));
+  const isCampusRoute = Boolean(
+    firstSegment && !KNOWN_STATIC_ROUTES.has(firstSegment.toLowerCase())
+  );
   const campusSlug = isCampusRoute ? firstSegment : null;
 
   // Context-aware navigation links
@@ -50,12 +65,14 @@ export default function Header() {
     ? [
         { href: `/${campusSlug}`, label: "Home", icon: HiOutlineHome },
         { href: `/${campusSlug}/about`, label: "About", icon: HiOutlineInformationCircle },
+        { href: `/${campusSlug}/events`, label: "Events", icon: HiOutlineCalendar },
         { href: `/${campusSlug}/blog`, label: "Blog", icon: HiOutlineDocumentText },
         { href: `/${campusSlug}/contact`, label: "Contact", icon: HiOutlineEnvelope },
       ]
     : [
         { href: "/", label: "Directory", icon: HiOutlineHome },
         { href: "/about", label: "About", icon: HiOutlineInformationCircle },
+        { href: "/events", label: "Events", icon: HiOutlineCalendar },
         { href: "/blog", label: "Blog", icon: HiOutlineDocumentText },
         { href: "/contact", label: "Contact", icon: HiOutlineEnvelope },
       ];

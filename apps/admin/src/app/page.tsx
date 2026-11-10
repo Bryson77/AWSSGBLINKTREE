@@ -3307,6 +3307,7 @@ function Dashboard() {
               actorName={currentUserName || currentUserEmail}
               isSuperAdmin={isSuperAdmin}
               token={sessionToken}
+              orgs={orgs}
             />
           )}
 

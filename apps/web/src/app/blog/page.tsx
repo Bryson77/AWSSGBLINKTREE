@@ -137,7 +137,7 @@ export default function BlogPage() {
           ) : (
             <div className="space-y-6">
               {posts.map((post) => (
-                <Link
+                <a
                   key={post.id}
                   href={`/blog/${post.slug}`}
                   className="group block border-[3px] border-black bg-white p-5 sm:p-6 shadow-[4px_4px_0px_#000000] hover:shadow-[6px_6px_0px_#7C3AED] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all no-underline text-black"
@@ -180,7 +180,7 @@ export default function BlogPage() {
                     <span>Read Full Article</span>
                     <HiArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </div>
-                </Link>
+                </a>
               ))}
             </div>
           )}

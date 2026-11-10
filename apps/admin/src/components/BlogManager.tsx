@@ -16,6 +16,10 @@ import {
   HiOutlineXMark,
   HiOutlineDocumentText,
   HiOutlineCalendar,
+  HiOutlineLink,
+  HiOutlineCodeBracket,
+  HiOutlineListBullet,
+  HiOutlineChatBubbleBottomCenterText,
 } from "react-icons/hi2";
 
 interface BlogManagerProps {
@@ -41,7 +45,45 @@ export function BlogManager({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
   const [showImageModal, setShowImageModal] = useState(false);
+  const [showInlineImageModal, setShowInlineImageModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkModalData, setLinkModalData] = useState({ text: "", url: "" });
   const [renderedPreview, setRenderedPreview] = useState("");
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const insertAtCursor = (before: string, after: string = "", defaultText: string = "") => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    const currentContent = editingPost?.content || "";
+    const selectedText = currentContent.substring(start, end) || defaultText;
+    const replacement = before + selectedText + after;
+    const newContent =
+      currentContent.substring(0, start) + replacement + currentContent.substring(end);
+    setEditingPost((prev) => (prev ? { ...prev, content: newContent } : null));
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(
+        start + before.length,
+        start + before.length + selectedText.length
+      );
+    }, 50);
+  };
+
+  const handleInsertLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkModalData.url.trim()) {
+      toast.error("Please provide a valid URL");
+      return;
+    }
+    const label = linkModalData.text.trim() || linkModalData.url.trim();
+    insertAtCursor(`[${label}](${linkModalData.url.trim()})`);
+    setShowLinkModal(false);
+    setLinkModalData({ text: "", url: "" });
+    toast.success("Link inserted into article!");
+  };
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -461,14 +503,97 @@ export function BlogManager({
                   mobileTab === "edit" ? "flex" : "hidden md:flex"
                 }`}
               >
-                <div className="mb-1 flex items-center justify-between font-mono text-[10px] font-bold text-zinc-500 uppercase">
-                  <span>Markdown Syntax Supported (# H1, **bold**, `code`, etc.)</span>
-                  <span>{editingPost.content?.length || 0} chars</span>
+                {/* Formatting & Media Insertion Toolbar */}
+                <div className="mb-2 flex flex-wrap items-center gap-1.5 border-2 border-black bg-zinc-100 p-1.5 shadow-[2px_2px_0px_#000000]">
+                  <button
+                    type="button"
+                    onClick={() => setShowInlineImageModal(true)}
+                    className="flex items-center gap-1 border border-black bg-purple-600 px-2 py-1 font-mono text-[10px] font-black uppercase text-white hover:bg-purple-700 shadow-[1px_1px_0px_#000000] cursor-pointer"
+                    title="Upload picture to place between text"
+                  >
+                    <HiOutlinePhoto className="h-3.5 w-3.5" />
+                    <span>+ Picture</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowLinkModal(true)}
+                    className="flex items-center gap-1 border border-black bg-white px-2 py-1 font-mono text-[10px] font-black uppercase text-black hover:bg-black hover:text-white shadow-[1px_1px_0px_#000000] cursor-pointer"
+                    title="Insert hyperlink [text](url)"
+                  >
+                    <HiOutlineLink className="h-3.5 w-3.5 text-purple-600" />
+                    <span>+ Link</span>
+                  </button>
+
+                  <div className="h-4 w-[1px] bg-zinc-400 mx-0.5" />
+
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("**", "**", "bold text")}
+                    className="border border-black bg-white px-2 py-1 font-mono text-[10px] font-black text-black hover:bg-zinc-200 cursor-pointer"
+                    title="Bold"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("*", "*", "italic text")}
+                    className="border border-black bg-white px-2 py-1 font-mono text-[10px] font-black italic text-black hover:bg-zinc-200 cursor-pointer"
+                    title="Italic"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("\n\n## ", "\n", "Section Heading")}
+                    className="border border-black bg-white px-2 py-1 font-mono text-[10px] font-black text-black hover:bg-zinc-200 cursor-pointer"
+                    title="Heading 2"
+                  >
+                    H2
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("\n\n### ", "\n", "Sub-heading")}
+                    className="border border-black bg-white px-2 py-1 font-mono text-[10px] font-black text-black hover:bg-zinc-200 cursor-pointer"
+                    title="Heading 3"
+                  >
+                    H3
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("\n\n- ", "\n", "List item")}
+                    className="flex items-center gap-1 border border-black bg-white px-1.5 py-1 font-mono text-[10px] font-bold text-black hover:bg-zinc-200 cursor-pointer"
+                    title="Bullet List"
+                  >
+                    <HiOutlineListBullet className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("\n\n> ", "\n", "Quote callout text")}
+                    className="flex items-center gap-1 border border-black bg-white px-1.5 py-1 font-mono text-[10px] font-bold text-black hover:bg-zinc-200 cursor-pointer"
+                    title="Blockquote"
+                  >
+                    <HiOutlineChatBubbleBottomCenterText className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("\n\n```bash\n", "\n```\n", "aws s3 ls")}
+                    className="flex items-center gap-1 border border-black bg-white px-1.5 py-1 font-mono text-[10px] font-bold text-black hover:bg-zinc-200 cursor-pointer"
+                    title="Code Block"
+                  >
+                    <HiOutlineCodeBracket className="h-3.5 w-3.5" />
+                  </button>
+
+                  <div className="ml-auto font-mono text-[9px] font-bold text-zinc-500 uppercase">
+                    {editingPost.content?.length || 0} chars
+                  </div>
                 </div>
+
                 <textarea
+                  ref={textareaRef}
                   value={editingPost.content || ""}
                   onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
-                  placeholder="Write your article in Markdown..."
+                  placeholder="Write your article in Markdown. Use the toolbar above to place pictures and links anywhere in between paragraphs..."
                   className="w-full flex-1 resize-none border-2 border-black bg-zinc-50 p-3 font-mono text-xs text-black leading-relaxed focus:bg-white focus:outline-none focus:ring-1 focus:ring-purple-600"
                 />
               </div>
@@ -499,7 +624,9 @@ export function BlogManager({
                       [&>h2]:text-base [&>h2]:font-black [&>h2]:uppercase [&>h2]:mt-3 [&>h2]:mb-1
                       [&>p]:text-xs [&>p]:mb-2
                       [&>ul]:list-disc [&>ul]:pl-4 [&>ul]:text-xs [&>ul]:mb-2
-                      [&>pre]:bg-black [&>pre]:text-purple-300 [&>pre]:p-2 [&>pre]:font-mono [&>pre]:text-[11px]"
+                      [&>pre]:bg-black [&>pre]:text-purple-300 [&>pre]:p-2 [&>pre]:font-mono [&>pre]:text-[11px]
+                      [&_img]:max-w-full [&_img]:border-2 [&_img]:border-black [&_img]:shadow-[3px_3px_0px_#000000] [&_img]:my-3 [&_img]:mx-auto [&_img]:block
+                      [&_a]:text-purple-600 [&_a]:underline [&_a]:font-bold [&_a]:hover:text-black"
                     dangerouslySetInnerHTML={{ __html: renderedPreview || "<p className='text-zinc-400 italic'>Type on the left to see live preview...</p>" }}
                   />
                 </div>
@@ -546,6 +673,87 @@ export function BlogManager({
             orgId={editingPost?.org_id || currentOrgId}
             title="Upload Article Cover Image"
           />
+
+          {/* Inline Content Picture Upload Modal */}
+          <ImageUploadModal
+            isOpen={showInlineImageModal}
+            onClose={() => setShowInlineImageModal(false)}
+            onSuccess={(url) => {
+              insertAtCursor(`\n\n![Article image](${url})\n\n`);
+              setShowInlineImageModal(false);
+              toast.success("Picture inserted into article!");
+            }}
+            aspectRatio="16:9"
+            category="blog"
+            orgId={editingPost?.org_id || currentOrgId}
+            title="Upload Picture to Insert in Article"
+          />
+
+          {/* Hyperlink Insertion Modal */}
+          {showLinkModal && (
+            <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+              <div className="w-full max-w-md border-[3px] border-black bg-white p-5 shadow-[8px_8px_0px_#000000]">
+                <div className="mb-4 flex items-center justify-between border-b-2 border-black pb-2">
+                  <div className="flex items-center gap-1.5 font-mono text-xs font-black uppercase text-black">
+                    <HiOutlineLink className="h-4 w-4 text-purple-600" />
+                    <span>Insert Hyperlink</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowLinkModal(false)}
+                    className="text-black hover:text-purple-600 cursor-pointer"
+                  >
+                    <HiOutlineXMark className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleInsertLink} className="space-y-3">
+                  <div>
+                    <label className="mb-1 block font-mono text-[10px] font-black uppercase text-black">
+                      Link Text (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. AWS Skill Builder / Official Docs"
+                      value={linkModalData.text}
+                      onChange={(e) => setLinkModalData({ ...linkModalData, text: e.target.value })}
+                      className="w-full border-2 border-black bg-zinc-50 px-2.5 py-1.5 font-sans text-xs text-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-purple-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block font-mono text-[10px] font-black uppercase text-black">
+                      Destination URL *
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://..."
+                      value={linkModalData.url}
+                      onChange={(e) => setLinkModalData({ ...linkModalData, url: e.target.value })}
+                      className="w-full border-2 border-black bg-zinc-50 px-2.5 py-1.5 font-mono text-xs text-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-purple-600"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowLinkModal(false)}
+                      className="border-2 border-black bg-white px-3 py-1.5 font-mono text-xs font-bold uppercase text-black hover:bg-zinc-100 shadow-[2px_2px_0px_#000000] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="border-2 border-black bg-purple-600 px-4 py-1.5 font-mono text-xs font-black uppercase text-white hover:bg-purple-700 shadow-[2px_2px_0px_#000000] cursor-pointer"
+                    >
+                      Insert Link
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

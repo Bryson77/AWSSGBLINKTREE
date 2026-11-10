@@ -16,9 +16,13 @@ import {
 } from "react-icons/hi2";
 import { toast } from "sonner";
 
-export default function BlogPostClient() {
+export default function BlogPostClient({
+  initialSlug,
+}: {
+  initialSlug?: string;
+} = {}) {
   const params = useParams();
-  const slug = params?.slug as string;
+  const paramSlug = params?.slug as string | undefined;
   const router = useRouter();
 
   const [post, setPost] = useState<Post | null>(null);
@@ -26,16 +30,36 @@ export default function BlogPostClient() {
   const [htmlContent, setHtmlContent] = useState("");
 
   useEffect(() => {
-    if (!slug) return;
+    let resolvedSlug = initialSlug || paramSlug || "";
+    if (typeof window !== "undefined") {
+      const segments = window.location.pathname
+        .replace(/^\/|\/$/g, "")
+        .split("/")
+        .filter(Boolean);
+      if (
+        segments.length >= 2 &&
+        (segments[0].toLowerCase() === "blog" ||
+          segments[0].toLowerCase() === "blogs")
+      ) {
+        resolvedSlug = decodeURIComponent(segments[1]);
+      }
+    }
+
+    if (!resolvedSlug) {
+      setLoading(false);
+      return;
+    }
 
     async function loadPost() {
       try {
         const { data, error } = await supabase
           .from("posts")
           .select("*")
-          .eq("slug", slug)
+          .eq("slug", resolvedSlug)
           .eq("status", "published")
-          .single();
+          .order("published_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         if (error || !data) {
           console.warn("Post not found:", error?.message);
@@ -53,7 +77,7 @@ export default function BlogPostClient() {
     }
 
     loadPost();
-  }, [slug]);
+  }, [initialSlug, paramSlug]);
 
   const handleShare = async () => {
     const url = typeof window !== "undefined" ? window.location.href : "";
@@ -200,7 +224,9 @@ export default function BlogPostClient() {
                 [&>code]:bg-zinc-100 [&>code]:border [&>code]:border-black [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:font-mono [&>code]:text-xs [&>code]:text-purple-800
                 [&>table]:w-full [&>table]:border-collapse [&>table]:border-2 [&>table]:border-black [&>table]:my-4
                 [&>table_th]:border-2 [&>table_th]:border-black [&>table_th]:bg-black [&>table_th]:text-white [&>table_th]:p-2 [&>table_th]:font-mono [&>table_th]:text-xs [&>table_th]:uppercase
-                [&>table_td]:border-2 [&>table_td]:border-black [&>table_td]:p-2 [&>table_td]:font-mono [&>table_td]:text-xs"
+                [&>table_td]:border-2 [&>table_td]:border-black [&>table_td]:p-2 [&>table_td]:font-mono [&>table_td]:text-xs
+                [&_img]:max-w-full [&_img]:border-[3px] [&_img]:border-black [&_img]:shadow-[5px_5px_0px_#000000] [&_img]:my-6 [&_img]:mx-auto [&_img]:block
+                [&_a]:text-accent-purple [&_a]:underline [&_a]:font-bold [&_a]:hover:text-black [&_a]:transition-colors"
               dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
 

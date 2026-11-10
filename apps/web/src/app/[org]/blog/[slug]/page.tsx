@@ -10,7 +10,10 @@ export async function generateStaticParams() {
       .is("deleted_at", null);
 
     if (!orgs || orgs.length === 0) {
-      return [{ org: "tut", slug: "welcome" }];
+      return [
+        { org: "tut", slug: "welcome" },
+        { org: "TUT", slug: "welcome" },
+      ];
     }
 
     const { data: posts } = await supabase
@@ -19,14 +22,30 @@ export async function generateStaticParams() {
       .eq("status", "published");
 
     const params: { org: string; slug: string }[] = [];
+    const seen = new Set<string>();
+
+    const addParam = (orgSlug: string, postSlug: string) => {
+      const key = `${orgSlug}:::${postSlug}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        params.push({ org: orgSlug, slug: postSlug });
+      }
+    };
+
     for (const org of orgs) {
+      if (!org.slug) continue;
+      const lowerOrg = org.slug.toLowerCase();
+      const upperOrg = org.slug.toUpperCase();
+
+      addParam(lowerOrg, "welcome");
+      addParam(upperOrg, "welcome");
+
       const orgPosts = (posts || []).filter((p) => p.org_id === org.id);
-      if (orgPosts.length > 0) {
-        for (const post of orgPosts) {
-          params.push({ org: org.slug.toLowerCase(), slug: post.slug });
+      for (const post of orgPosts) {
+        if (post.slug) {
+          addParam(lowerOrg, post.slug);
+          addParam(upperOrg, post.slug);
         }
-      } else {
-        params.push({ org: org.slug.toLowerCase(), slug: "welcome" });
       }
     }
 

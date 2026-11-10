@@ -15,28 +15,60 @@ import {
   HiArrowUpRight,
 } from "react-icons/hi2";
 
-export default function OrgBlogClient() {
+export default function OrgBlogClient({
+  initialOrgSlug,
+}: {
+  initialOrgSlug?: string;
+} = {}) {
   const params = useParams();
   const router = useRouter();
-  const orgSlug = (params?.org as string) || "";
+  const paramOrgSlug = (params?.org as string) || "";
+  const [orgSlug, setOrgSlug] = useState<string>(initialOrgSlug || paramOrgSlug);
   const [shouldRender, setShouldRender] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let resolvedOrg = initialOrgSlug || paramOrgSlug || "";
+    if (typeof window !== "undefined") {
+      const segments = window.location.pathname
+        .replace(/^\/|\/$/g, "")
+        .split("/")
+        .filter(Boolean);
+      if (
+        segments.length >= 2 &&
+        (segments[1].toLowerCase() === "blog" ||
+          segments[1].toLowerCase() === "blogs")
+      ) {
+        resolvedOrg = decodeURIComponent(segments[0]);
+      }
+    }
+
+    if (resolvedOrg && resolvedOrg !== orgSlug) {
+      setOrgSlug(resolvedOrg);
+    }
+
     async function loadData() {
       try {
         setShouldRender(true);
+        if (!resolvedOrg) return;
 
         const { data: orgData } = await supabase
           .from("orgs")
           .select("id")
-          .ilike("slug", orgSlug)
+          .ilike("slug", resolvedOrg)
           .eq("is_active", true)
           .is("deleted_at", null)
           .maybeSingle();
+
+        if (!orgData?.id) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
 
         if (orgData) {
           // Load announcement
@@ -77,9 +109,37 @@ export default function OrgBlogClient() {
     }
 
     loadData();
-  }, [orgSlug, router]);
+  }, [initialOrgSlug, paramOrgSlug, router]);
 
   if (!shouldRender) return null;
+
+  if (notFound) {
+    return (
+      <div className="brutal-grid-bg flex min-h-screen flex-col bg-[#F4F4F5]">
+        <Header />
+        <main className="flex-1 flex items-center justify-center px-4 py-20">
+          <div className="w-full max-w-md border-[3px] border-black bg-white p-6 sm:p-8 text-center shadow-[6px_6px_0px_#000000]">
+            <div className="inline-block border-2 border-black bg-red-500 px-3 py-1 font-mono text-xs font-black uppercase text-white shadow-[2px_2px_0px_#000000] mb-4">
+              404 // SBG_NOT_FOUND
+            </div>
+            <h1 className="text-2xl font-black uppercase text-black tracking-tight mb-2">
+              SBG Not Found
+            </h1>
+            <p className="font-mono text-xs text-zinc-600 mb-6 leading-relaxed">
+              We couldn&rsquo;t find an active AWS Student Builder Group matching &ldquo;{orgSlug}&rdquo;.
+            </p>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 border-2 border-black bg-black px-4 py-2.5 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#7C3AED] hover:bg-zinc-800 transition-all no-underline"
+            >
+              <span>Explore All SBG Groups</span>
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   const calculateReadingTime = (content: string) => {
     const words = content.trim().split(/\s+/).length;
@@ -147,7 +207,7 @@ export default function OrgBlogClient() {
           ) : (
             <div className="space-y-6">
               {posts.map((post) => (
-                <Link
+                <a
                   key={post.id}
                   href={`/${orgSlug}/blog/${post.slug}`}
                   className="group block border-[3px] border-black bg-white p-5 sm:p-6 shadow-[4px_4px_0px_#000000] hover:shadow-[6px_6px_0px_#7C3AED] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all no-underline text-black"
@@ -186,7 +246,7 @@ export default function OrgBlogClient() {
                     <span>Read Full Article</span>
                     <HiArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </div>
-                </Link>
+                </a>
               ))}
             </div>
           )}

@@ -51,10 +51,15 @@ const CATEGORIES = [
   "Other",
 ];
 
-export default function OrgContactClient() {
+export default function OrgContactClient({
+  initialOrgSlug,
+}: {
+  initialOrgSlug?: string;
+} = {}) {
   const params = useParams();
   const router = useRouter();
-  const orgSlug = (params?.org as string) || "";
+  const paramOrgSlug = (params?.org as string) || "";
+  const [orgSlug, setOrgSlug] = useState<string>(initialOrgSlug || paramOrgSlug);
 
   const [shouldRender, setShouldRender] = useState(false);
   const [orgId, setOrgId] = useState<string | null>(null);
@@ -69,14 +74,30 @@ export default function OrgContactClient() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    let resolvedOrg = initialOrgSlug || paramOrgSlug || "";
+    if (typeof window !== "undefined") {
+      const segments = window.location.pathname
+        .replace(/^\/|\/$/g, "")
+        .split("/")
+        .filter(Boolean);
+      if (segments.length >= 2 && segments[1].toLowerCase() === "contact") {
+        resolvedOrg = decodeURIComponent(segments[0]);
+      }
+    }
+
+    if (resolvedOrg && resolvedOrg !== orgSlug) {
+      setOrgSlug(resolvedOrg);
+    }
+
     async function loadOrgAndChannels() {
       try {
         setShouldRender(true);
+        if (!resolvedOrg) return;
 
         const { data: orgData } = await supabase
           .from("orgs")
           .select("id")
-          .ilike("slug", orgSlug)
+          .ilike("slug", resolvedOrg)
           .eq("is_active", true)
           .is("deleted_at", null)
           .maybeSingle();

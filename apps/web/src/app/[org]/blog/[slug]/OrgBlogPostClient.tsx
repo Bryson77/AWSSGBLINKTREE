@@ -16,25 +16,57 @@ import {
 } from "react-icons/hi2";
 import { toast } from "sonner";
 
-export default function OrgBlogPostClient() {
+export default function OrgBlogPostClient({
+  initialOrgSlug,
+  initialSlug,
+}: {
+  initialOrgSlug?: string;
+  initialSlug?: string;
+} = {}) {
   const params = useParams();
-  const orgSlug = (params?.org as string) || "";
-  const slug = params?.slug as string;
+  const paramOrgSlug = (params?.org as string) || "";
+  const paramSlug = (params?.slug as string) || "";
 
+  const [orgSlug, setOrgSlug] = useState<string>(initialOrgSlug || paramOrgSlug);
   const [post, setPost] = useState<Post | null>(null);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
   const [htmlContent, setHtmlContent] = useState("");
 
   useEffect(() => {
-    if (!slug) return;
+    let resolvedOrg = initialOrgSlug || paramOrgSlug || "";
+    let resolvedSlug = initialSlug || paramSlug || "";
+
+    if (typeof window !== "undefined") {
+      const segments = window.location.pathname
+        .replace(/^\/|\/$/g, "")
+        .split("/")
+        .filter(Boolean);
+      if (
+        segments.length >= 3 &&
+        (segments[1].toLowerCase() === "blog" ||
+          segments[1].toLowerCase() === "blogs")
+      ) {
+        resolvedOrg = decodeURIComponent(segments[0]);
+        resolvedSlug = decodeURIComponent(segments[2]);
+      }
+    }
+
+    if (resolvedOrg && resolvedOrg !== orgSlug) {
+      setOrgSlug(resolvedOrg);
+    }
+
+    if (!resolvedOrg || !resolvedSlug) {
+      setLoading(false);
+      return;
+    }
 
     async function loadPost() {
       try {
         const { data: orgData } = await supabase
           .from("orgs")
           .select("id")
-          .ilike("slug", orgSlug)
+          .ilike("slug", resolvedOrg)
           .eq("is_active", true)
           .is("deleted_at", null)
           .maybeSingle();
@@ -63,9 +95,9 @@ export default function OrgBlogPostClient() {
             .from("posts")
             .select("*")
             .eq("org_id", orgData.id)
-            .eq("slug", slug)
+            .eq("slug", resolvedSlug)
             .eq("status", "published")
-            .single();
+            .maybeSingle();
 
           if (data && !error) {
             setPost(data as Post);
@@ -82,7 +114,7 @@ export default function OrgBlogPostClient() {
     }
 
     loadPost();
-  }, [orgSlug, slug]);
+  }, [initialOrgSlug, initialSlug, paramOrgSlug, paramSlug]);
 
   const handleShare = async () => {
     const url = typeof window !== "undefined" ? window.location.href : "";
@@ -232,7 +264,9 @@ export default function OrgBlogPostClient() {
                 [&>code]:bg-zinc-100 [&>code]:border [&>code]:border-black [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:font-mono [&>code]:text-xs [&>code]:text-purple-800
                 [&>table]:w-full [&>table]:border-collapse [&>table]:border-2 [&>table]:border-black [&>table]:my-4
                 [&_th]:border-2 [&_th]:border-black [&_th]:bg-black [&_th]:text-white [&_th]:p-2 [&_th]:font-mono [&_th]:text-xs [&_th]:uppercase
-                [&_td]:border-2 [&_td]:border-black [&_td]:p-2 [&_td]:font-mono [&_td]:text-xs"
+                [&_td]:border-2 [&_td]:border-black [&_td]:p-2 [&_td]:font-mono [&_td]:text-xs
+                [&_img]:max-w-full [&_img]:border-[3px] [&_img]:border-black [&_img]:shadow-[5px_5px_0px_#000000] [&_img]:my-6 [&_img]:mx-auto [&_img]:block
+                [&_a]:text-accent-purple [&_a]:underline [&_a]:font-bold [&_a]:hover:text-black [&_a]:transition-colors"
               dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
 

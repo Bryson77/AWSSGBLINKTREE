@@ -1,4 +1,10 @@
 # Cloudflare Pages Redirects & SPA Fallback
+# Canonicalize /blogs to /blog
+/blogs  /blog  301
+/blogs/*  /blog/:splat  301
+# Canonicalize /previous-events to /events
+/previous-events  /events  301
+/previous-events/*  /events/:splat  301
 # Static files and pre-rendered pages match first. Unmatched dynamic paths fallback to index.html with HTTP 200 for client hydration.
 /*  /index.html  200
 

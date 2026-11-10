@@ -17,6 +17,14 @@ import { supabase, Organization } from "@awssbg/shared";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import OrgHomeClient from "./[org]/OrgHomeClient";
+import OrgBlogClient from "./[org]/blog/OrgBlogClient";
+import OrgBlogPostClient from "./[org]/blog/[slug]/OrgBlogPostClient";
+import OrgAboutClient from "./[org]/about/OrgAboutClient";
+import OrgContactClient from "./[org]/contact/OrgContactClient";
+import OrgEventsClient from "./[org]/events/OrgEventsClient";
+import BlogPage from "./blog/page";
+import BlogPostClient from "./blog/[slug]/BlogPostClient";
+import GlobalEventsPage from "./events/page";
 import {
   HiOutlineArrowRight,
   HiOutlineBuildingLibrary,
@@ -30,25 +38,102 @@ const KNOWN_STATIC_ROUTES = new Set([
   "about",
   "contact",
   "blog",
+  "blogs",
   "events",
   "ticket",
   "privacy",
   "terms",
+  "join",
+  "onboard",
+  "login",
   "admin",
 ]);
 
+type FallbackRoute =
+  | { type: "none" }
+  | { type: "global-blog" }
+  | { type: "global-blog-post"; slug: string }
+  | { type: "global-events" }
+  | { type: "org-home"; org: string }
+  | { type: "org-blog"; org: string }
+  | { type: "org-blog-post"; org: string; slug: string }
+  | { type: "org-events"; org: string }
+  | { type: "org-about"; org: string }
+  | { type: "org-contact"; org: string };
+
 export default function Home() {
-  const [targetSlug, setTargetSlug] = useState<string | null>(null);
+  const [fallbackRoute, setFallbackRoute] = useState<FallbackRoute>({ type: "none" });
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Check if client arrived via Cloudflare Pages SPA fallback at /{institution-slug}
+  // Check if client arrived via Cloudflare Pages SPA fallback at a dynamic subroute
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const pathSegment = window.location.pathname.replace(/^\/|\/$/g, "").split("/")[0];
-      if (pathSegment && !KNOWN_STATIC_ROUTES.has(pathSegment.toLowerCase())) {
-        setTargetSlug(pathSegment);
+      const segments = window.location.pathname
+        .replace(/^\/|\/$/g, "")
+        .split("/")
+        .filter(Boolean);
+
+      if (segments.length === 0) return;
+
+      const first = segments[0].toLowerCase();
+
+      if (first === "blogs" && segments.length === 1) {
+        setFallbackRoute({ type: "global-blog" });
+        return;
+      }
+
+      if (
+        (first === "events" || first === "previous-events") &&
+        segments.length === 1
+      ) {
+        setFallbackRoute({ type: "global-events" });
+        return;
+      }
+
+      if ((first === "blog" || first === "blogs") && segments.length >= 2) {
+        setFallbackRoute({
+          type: "global-blog-post",
+          slug: decodeURIComponent(segments[1]),
+        });
+        return;
+      }
+
+      if (!KNOWN_STATIC_ROUTES.has(first)) {
+        const orgSlug = decodeURIComponent(segments[0]);
+        const second = segments[1]?.toLowerCase();
+
+        if ((second === "blog" || second === "blogs") && segments.length >= 3) {
+          setFallbackRoute({
+            type: "org-blog-post",
+            org: orgSlug,
+            slug: decodeURIComponent(segments[2]),
+          });
+          return;
+        }
+
+        if (second === "blog" || second === "blogs") {
+          setFallbackRoute({ type: "org-blog", org: orgSlug });
+          return;
+        }
+
+        if (second === "events" || second === "previous-events") {
+          setFallbackRoute({ type: "org-events", org: orgSlug });
+          return;
+        }
+
+        if (second === "about") {
+          setFallbackRoute({ type: "org-about", org: orgSlug });
+          return;
+        }
+
+        if (second === "contact") {
+          setFallbackRoute({ type: "org-contact", org: orgSlug });
+          return;
+        }
+
+        setFallbackRoute({ type: "org-home", org: orgSlug });
       }
     }
   }, []);
@@ -79,9 +164,38 @@ export default function Home() {
     fetchOrgs();
   }, []);
 
-  // If a slug was passed directly in the URL path, render the individual SBG client
-  if (targetSlug) {
-    return <OrgHomeClient initialSlug={targetSlug} />;
+  // Render matched SPA fallback view when Cloudflare Pages rewrites un-exported paths to /index.html
+  if (fallbackRoute.type === "global-blog") {
+    return <BlogPage />;
+  }
+  if (fallbackRoute.type === "global-blog-post") {
+    return <BlogPostClient initialSlug={fallbackRoute.slug} />;
+  }
+  if (fallbackRoute.type === "global-events") {
+    return <GlobalEventsPage />;
+  }
+  if (fallbackRoute.type === "org-blog") {
+    return <OrgBlogClient initialOrgSlug={fallbackRoute.org} />;
+  }
+  if (fallbackRoute.type === "org-blog-post") {
+    return (
+      <OrgBlogPostClient
+        initialOrgSlug={fallbackRoute.org}
+        initialSlug={fallbackRoute.slug}
+      />
+    );
+  }
+  if (fallbackRoute.type === "org-events") {
+    return <OrgEventsClient initialOrgSlug={fallbackRoute.org} />;
+  }
+  if (fallbackRoute.type === "org-about") {
+    return <OrgAboutClient initialOrgSlug={fallbackRoute.org} />;
+  }
+  if (fallbackRoute.type === "org-contact") {
+    return <OrgContactClient initialOrgSlug={fallbackRoute.org} />;
+  }
+  if (fallbackRoute.type === "org-home") {
+    return <OrgHomeClient initialSlug={fallbackRoute.org} />;
   }
 
   // Filter organizations by search query

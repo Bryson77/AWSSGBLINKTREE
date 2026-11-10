@@ -65,24 +65,45 @@ const FAQS = [
   },
 ];
 
-export default function OrgAboutClient() {
+export default function OrgAboutClient({
+  initialOrgSlug,
+}: {
+  initialOrgSlug?: string;
+} = {}) {
   const params = useParams();
   const router = useRouter();
-  const orgSlug = (params?.org as string) || "";
+  const paramOrgSlug = (params?.org as string) || "";
+  const [orgSlug, setOrgSlug] = useState<string>(initialOrgSlug || paramOrgSlug);
   const [shouldRender, setShouldRender] = useState(false);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [aboutBio, setAboutBio] = useState<string | null>(null);
   const [orgName, setOrgName] = useState<string>("");
 
   useEffect(() => {
+    let resolvedOrg = initialOrgSlug || paramOrgSlug || "";
+    if (typeof window !== "undefined") {
+      const segments = window.location.pathname
+        .replace(/^\/|\/$/g, "")
+        .split("/")
+        .filter(Boolean);
+      if (segments.length >= 2 && segments[1].toLowerCase() === "about") {
+        resolvedOrg = decodeURIComponent(segments[0]);
+      }
+    }
+
+    if (resolvedOrg && resolvedOrg !== orgSlug) {
+      setOrgSlug(resolvedOrg);
+    }
+
     async function loadAboutData() {
       try {
         setShouldRender(true);
+        if (!resolvedOrg) return;
 
         const { data: orgData } = await supabase
           .from("orgs")
           .select("id, name")
-          .ilike("slug", orgSlug)
+          .ilike("slug", resolvedOrg)
           .eq("is_active", true)
           .is("deleted_at", null)
           .maybeSingle();
