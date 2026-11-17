@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "deploy": "next build && npx wrangler pages deploy ./out --project-name=awssbg-admin --commit-dirty=true"
+    "deploy": "next build && npx wrangler deploy"
   },
   "dependencies": {
     "@awssbg/shared": "*",
